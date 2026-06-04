@@ -6,7 +6,7 @@ import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Alert } from "../ui/Alert";
 import { Badge } from "../ui/Badge";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import { useRouter, useParams } from "next/navigation";
 import { Save, Eye, Code, ArrowLeft, Plus, Info } from "lucide-react";
 import Editor from "@monaco-editor/react";

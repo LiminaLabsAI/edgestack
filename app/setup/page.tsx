@@ -112,9 +112,10 @@ export default function SetupPage() {
             onBack={handleBack}
           />
         )}
-        {step === 5 && hardwareProfile && (
+        {step === 5 && hardwareProfile && selectedModel && (
           <ResourceAllocationStep
             hardwareProfile={hardwareProfile}
+            selectedModel={selectedModel}
             onNext={handleResourceNext}
             onBack={handleBack}
           />

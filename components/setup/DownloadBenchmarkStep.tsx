@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { invoke, listen } from "@/lib/tauri";
 import { Button } from "../ui/Button";
 import { ProgressBar } from "../ui/ProgressBar";
 import { Alert } from "../ui/Alert";

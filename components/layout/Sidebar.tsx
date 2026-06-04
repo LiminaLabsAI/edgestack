@@ -11,7 +11,10 @@ import {
   Coins,
   Settings,
   FileText,
-  Workflow
+  Workflow,
+  MessageSquare,
+  GitCompare,
+  Cpu
 } from "lucide-react";
 
 interface SidebarProps {
@@ -24,6 +27,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ notificationCount = 0 }) => {
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Workflows", href: "/workflows", icon: GitBranch },
+    { name: "AI Chat Playground", href: "/playground", icon: MessageSquare },
+    { name: "Model Arena", href: "/compare", icon: GitCompare },
+    { name: "Models Hub", href: "/models", icon: Cpu },
     { name: "Object Vault", href: "/vault", icon: Database },
     { name: "Agent Metrics", href: "/agents", icon: Users },
     { name: "Cost Analytics", href: "/costs", icon: Coins },

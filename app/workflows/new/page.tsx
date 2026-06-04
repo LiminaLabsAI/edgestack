@@ -6,9 +6,9 @@ import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { Alert } from "../../../components/ui/Alert";
 import { Badge } from "../../../components/ui/Badge";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import { useRouter } from "next/navigation";
-import { Save, Eye, Code, ArrowLeft, Plus, Play, Info } from "lucide-react";
+import { Save, Eye, Code, ArrowLeft, Plus, Play, Info, Sparkles, Send, Check } from "lucide-react";
 import Link from "next/link";
 import Editor from "@monaco-editor/react";
 import jsYaml from "js-yaml";
@@ -28,6 +28,11 @@ steps:
     action: "save_to_vault"
 `;
 
+interface CopilotMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export default function NewWorkflowPage() {
   const router = useRouter();
   const [name, setName] = useState("My Business Agent");
@@ -37,6 +42,19 @@ export default function NewWorkflowPage() {
   const [parsedSteps, setParsedSteps] = useState<any[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Sidebar Tabs: "palette" | "copilot"
+  const [activeSidebarTab, setActiveSidebarTab] = useState<"palette" | "copilot">("palette");
+
+  // Copilot Chat States
+  const [copilotInput, setCopilotInput] = useState("");
+  const [copilotLoading, setCopilotLoading] = useState(false);
+  const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([
+    {
+      role: "assistant",
+      content: "Hi! I am your EdgeStack Copilot. Describe your business automation target, and I will generate the local agent YAML layout for you!"
+    }
+  ]);
 
   // Validate YAML and parse steps
   const validateAndParse = (yamlStr: string) => {
@@ -109,6 +127,55 @@ export default function NewWorkflowPage() {
     }
   };
 
+  // Extract YAML block if present in message content
+  const getYamlBlock = (content: string) => {
+    const yamlRegex = /```yaml([\s\S]*?)```/i;
+    const match = content.match(yamlRegex);
+    return match ? match[1].trim() : null;
+  };
+
+  const handleCopilotSend = async () => {
+    if (!copilotInput.trim()) return;
+
+    const userText = copilotInput;
+    setCopilotMessages((prev) => [...prev, { role: "user", content: userText }]);
+    setCopilotInput("");
+    setCopilotLoading(true);
+
+    try {
+      const res = await invoke("generate_chat_response", {
+        model: "llama3.2:3b",
+        prompt: userText,
+        history: copilotMessages
+      });
+
+      setCopilotMessages((prev) => [...prev, { role: "assistant", content: res.text }]);
+      setCopilotLoading(false);
+    } catch (e) {
+      console.error(e);
+      setCopilotMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "[ERROR] Failed to query local builder copilot. Please try again." }
+      ]);
+      setCopilotLoading(false);
+    }
+  };
+
+  const applyYaml = (yamlString: string) => {
+    try {
+      // Validate that it compiles before applying
+      jsYaml.load(yamlString);
+      setYamlCode(yamlString);
+      setSuccessAlert("Applied Copilot YAML configuration successfully!");
+      setTimeout(() => setSuccessAlert(""), 3000);
+    } catch (e) {
+      console.error(e);
+      alert("Extracted YAML compiled with errors. Cannot load into canvas.");
+    }
+  };
+
+  const [successAlert, setSuccessAlert] = useState("");
+
   return (
     <Layout title="Workflow Editor">
       <div className="flex justify-between items-center mb-6">
@@ -153,6 +220,12 @@ export default function NewWorkflowPage() {
           </Button>
         </div>
       </div>
+
+      {successAlert && (
+        <Alert variant="success" title="Applied Code" className="mb-4">
+          {successAlert}
+        </Alert>
+      )}
 
       {validationError && (
         <Alert variant="error" title="YAML Compilation Error" className="mb-4">
@@ -226,72 +299,165 @@ export default function NewWorkflowPage() {
           )}
         </div>
 
-        {/* Sidebar palette */}
-        <div className="space-y-4">
-          <Card className="p-4">
-            <h3 className="font-bold text-sm text-gray-950 dark:text-white mb-3">Add Automation Actions</h3>
-            <div className="space-y-2">
-              <button
-                onClick={() => addStep("browse_web")}
-                className="w-full flex items-center gap-2 p-2.5 border border-gray-250 dark:border-gray-800 rounded-lg text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-900 border-dashed"
-              >
-                <Plus className="h-4 w-4 text-primary" />
-                <div>
-                  <div className="font-semibold text-gray-900 dark:text-white">Fetch Webpage</div>
-                  <div className="text-[10px] text-gray-500">Read a URL & extract text</div>
-                </div>
-              </button>
+        {/* Right side: Sidebar with Action Palette & Copilot tabs */}
+        <div className="space-y-4 flex flex-col h-full overflow-hidden">
+          {/* Tab buttons */}
+          <div className="flex border border-gray-250 dark:border-gray-800 rounded-lg p-0.5 bg-gray-50 dark:bg-gray-950 text-xs font-semibold">
+            <button
+              onClick={() => setActiveSidebarTab("palette")}
+              className={`flex-1 py-1.5 rounded-md border-none cursor-pointer flex items-center justify-center gap-1 ${
+                activeSidebarTab === "palette"
+                  ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              Add Actions
+            </button>
+            <button
+              onClick={() => setActiveSidebarTab("copilot")}
+              className={`flex-1 py-1.5 rounded-md border-none cursor-pointer flex items-center justify-center gap-1 ${
+                activeSidebarTab === "copilot"
+                  ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5 text-primary" /> AI Copilot
+            </button>
+          </div>
 
-              <button
-                onClick={() => addStep("ask_ai")}
-                className="w-full flex items-center gap-2 p-2.5 border border-gray-250 dark:border-gray-800 rounded-lg text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-900 border-dashed"
-              >
-                <Plus className="h-4 w-4 text-indigo-500" />
-                <div>
-                  <div className="font-semibold text-gray-900 dark:text-white">Ask Local AI</div>
-                  <div className="text-[10px] text-gray-500">Process content using local model</div>
-                </div>
-              </button>
+          {/* Tab contents */}
+          <div className="flex-1 overflow-y-auto">
+            {activeSidebarTab === "palette" ? (
+              <div className="space-y-4">
+                <Card className="p-4">
+                  <h3 className="font-bold text-sm text-gray-950 dark:text-white mb-3">Add Automation Actions</h3>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => addStep("browse_web")}
+                      className="w-full flex items-center gap-2 p-2.5 border border-gray-250 dark:border-gray-800 rounded-lg text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-900 border-dashed"
+                    >
+                      <Plus className="h-4 w-4 text-primary" />
+                      <div>
+                        <div className="font-semibold text-gray-900 dark:text-white">Fetch Webpage</div>
+                        <div className="text-[10px] text-gray-500">Read a URL & extract text</div>
+                      </div>
+                    </button>
 
-              <button
-                onClick={() => addStep("save_to_vault")}
-                className="w-full flex items-center gap-2 p-2.5 border border-gray-250 dark:border-gray-800 rounded-lg text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-900 border-dashed"
-                disabled
-              >
-                <Plus className="h-4 w-4 text-emerald-500" />
-                <div>
-                  <div className="font-semibold text-gray-400">Save to Object Vault</div>
-                  <div className="text-[10px] text-gray-400">Upload to local S3 storage</div>
-                </div>
-              </button>
+                    <button
+                      onClick={() => addStep("ask_ai")}
+                      className="w-full flex items-center gap-2 p-2.5 border border-gray-250 dark:border-gray-800 rounded-lg text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-900 border-dashed"
+                    >
+                      <Plus className="h-4 w-4 text-indigo-500" />
+                      <div>
+                        <div className="font-semibold text-gray-900 dark:text-white">Ask Local AI</div>
+                        <div className="text-[10px] text-gray-500">Process content using local model</div>
+                      </div>
+                    </button>
 
-              <button
-                onClick={() => addStep("send_email")}
-                className="w-full flex items-center gap-2 p-2.5 border border-gray-250 dark:border-gray-800 rounded-lg text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-900 border-dashed"
-                disabled
-              >
-                <Plus className="h-4 w-4 text-amber-500" />
-                <div>
-                  <div className="font-semibold text-gray-400">Send Email Alert</div>
-                  <div className="text-[10px] text-gray-400">Deliver notifications via SES</div>
-                </div>
-              </button>
-            </div>
-          </Card>
+                    <button
+                      onClick={() => addStep("save_to_vault")}
+                      className="w-full flex items-center gap-2 p-2.5 border border-gray-250 dark:border-gray-800 rounded-lg text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-900 border-dashed"
+                      disabled
+                    >
+                      <Plus className="h-4 w-4 text-emerald-500" />
+                      <div>
+                        <div className="font-semibold text-gray-400">Save to Object Vault</div>
+                        <div className="text-[10px] text-gray-400">Upload to local S3 storage</div>
+                      </div>
+                    </button>
 
-          <Card className="p-4 bg-gray-50 dark:bg-gray-900">
-            <h4 className="font-semibold text-xs text-gray-900 dark:text-white mb-1.5">Quick Guide</h4>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-normal">
-              You can reference outputs of previous steps in prompts using brackets syntax:{" "}
-              <code className="bg-black/5 dark:bg-white/10 px-1 rounded font-mono">
-                {"{{steps.[Step Name].output}}"}
-              </code>.
-            </p>
-          </Card>
+                    <button
+                      onClick={() => addStep("send_email")}
+                      className="w-full flex items-center gap-2 p-2.5 border border-gray-250 dark:border-gray-800 rounded-lg text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-900 border-dashed"
+                      disabled
+                    >
+                      <Plus className="h-4 w-4 text-amber-500" />
+                      <div>
+                        <div className="font-semibold text-gray-400">Send Email Alert</div>
+                        <div className="text-[10px] text-gray-400">Deliver notifications via SES</div>
+                      </div>
+                    </button>
+                  </div>
+                </Card>
+
+                <Card className="p-4 bg-gray-50 dark:bg-gray-900">
+                  <h4 className="font-semibold text-xs text-gray-900 dark:text-white mb-1.5">Quick Guide</h4>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-normal">
+                    You can reference outputs of previous steps in prompts using brackets syntax:{" "}
+                    <code className="bg-black/5 dark:bg-white/10 px-1 rounded font-mono">
+                      {"{{steps.[Step Name].output}}"}
+                    </code>.
+                  </p>
+                </Card>
+              </div>
+            ) : (
+              /* Copilot Chat */
+              <div className="border border-gray-250 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-950 flex flex-col h-full max-h-[calc(100vh-230px)]">
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 text-[10px] font-bold text-gray-500 flex items-center gap-1">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" /> EdgeStack Local Copilot
+                </div>
+                
+                {/* Message logs */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[150px]">
+                  {copilotMessages.map((m, idx) => {
+                    const yamlStr = m.role === "assistant" ? getYamlBlock(m.content) : null;
+                    return (
+                      <div key={idx} className={`space-y-1.5 max-w-[90%] ${m.role === "user" ? "ml-auto" : ""}`}>
+                        <div
+                          className={`p-2.5 rounded-xl text-[11px] leading-relaxed whitespace-pre-wrap ${
+                            m.role === "user"
+                              ? "bg-primary text-white rounded-tr-none"
+                              : "bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-250 border border-gray-200 dark:border-gray-800 rounded-tl-none"
+                          }`}
+                        >
+                          {m.content}
+                        </div>
+                        {yamlStr && (
+                          <Button
+                            onClick={() => applyYaml(yamlStr)}
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white border-none py-1 px-2.5 text-[9px] flex items-center gap-1"
+                          >
+                            <Check className="h-3 w-3" /> Apply YAML to Editor
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {copilotLoading && (
+                    <div className="flex gap-1 items-center p-2">
+                      <span className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Input bar */}
+                <div className="p-2 border-t border-gray-250 dark:border-gray-800 flex gap-1.5 bg-gray-50/50 dark:bg-gray-900/30">
+                  <input
+                    type="text"
+                    placeholder="Ask Copilot to build steps..."
+                    value={copilotInput}
+                    onChange={(e) => setCopilotInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleCopilotSend()}
+                    className="input flex-1 text-[11px] py-1.5 px-2 bg-white dark:bg-gray-900"
+                    disabled={copilotLoading}
+                  />
+                  <button
+                    onClick={handleCopilotSend}
+                    disabled={copilotLoading || !copilotInput.trim()}
+                    className="btn btn-primary p-1.5 rounded-lg"
+                    aria-label="Send message to copilot"
+                  >
+                    <Send className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </Layout>
   );
 }
-
-

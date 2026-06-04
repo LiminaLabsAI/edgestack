@@ -71,6 +71,7 @@ pub fn run() {
             commands::inference::list_models,
             commands::inference::generate,
             commands::inference::run_benchmark,
+            commands::inference::generate_chat_response,
             // Workflows
             commands::workflow::create_workflow,
             commands::workflow::update_workflow,

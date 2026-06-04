@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Layout } from "../../components/layout/Layout";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import { Coins, Zap, HelpCircle, ArrowUpRight, TrendingUp } from "lucide-react";
 
 interface DailyCost {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Bell, Search, Settings, Sun, Moon } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import Link from "next/link";
 
 interface TopBarProps {
@@ -18,14 +18,15 @@ export const TopBar: React.FC<TopBarProps> = ({ title = "Dashboard", onNotificat
     // Poll unread notification count
     const fetchUnreadCount = async () => {
       try {
-        const notifications: any[] = await invoke("get_agent_metrics"); // placeholder, or query notifications directly
-        // Let's query notifications count if possible. Or set standard 0 for now.
+        const notifications: any[] = await invoke("list_notifications");
+        const unread = notifications.filter((n) => !n.read_at).length;
+        setUnreadCount(unread);
       } catch (e) {
         console.error(e);
       }
     };
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
+    const interval = setInterval(fetchUnreadCount, 15000);
     return () => clearInterval(interval);
   }, []);
 

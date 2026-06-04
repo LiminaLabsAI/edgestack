@@ -5,7 +5,7 @@ import { Layout } from "../../components/layout/Layout";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Alert } from "../../components/ui/Alert";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import { Settings, ShieldAlert, Key, HelpCircle, Save, Trash2, Plus } from "lucide-react";
 
 interface AppConfig {

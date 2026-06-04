@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Layout } from "../../components/layout/Layout";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import { Database, Folder, FolderPlus, FileCode, Trash2, HardDrive, Calendar } from "lucide-react";
 
 interface VaultSummary {

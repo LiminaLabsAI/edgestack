@@ -13,7 +13,7 @@ pub async fn start_floci() -> Result<()> {
     // Download jar if not exists
     if !jar_path.exists() {
         println!("Downloading floci.jar...");
-        let url = "https://github.com/floci-io/floci/releases/latest/download/floci.jar";
+        let url = "https://github.com/floci-io/floci-cli/releases/latest/download/floci.jar";
         // We will try to download, but if it fails (offline or no internet), we write a fallback warning log.
         match reqwest::get(url).await {
             Ok(resp) => {
@@ -42,7 +42,14 @@ pub async fn start_floci() -> Result<()> {
     }
 
     // Launch subprocess: java -jar ~/edgestack/bin/floci.jar --port 4568
-    let mut child = Command::new("java")
+    let local_java = app_dir().join("jre").join("Contents").join("Home").join("bin").join("java");
+    let java_bin = if local_java.exists() {
+        local_java.to_string_lossy().to_string()
+    } else {
+        "java".to_string()
+    };
+
+    let mut child = Command::new(java_bin)
         .arg("-jar")
         .arg(&jar_path)
         .env("PORT", "4568")

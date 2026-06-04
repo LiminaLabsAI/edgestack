@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import { Button } from "../ui/Button";
 import { Alert } from "../ui/Alert";
 import { ShieldAlert, RefreshCw, SkipForward, Ban, Clock, ChevronDown, ChevronUp } from "lucide-react";

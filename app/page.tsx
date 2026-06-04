@@ -7,7 +7,7 @@ import { Badge } from "../components/ui/Badge";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { ActivityFeed } from "../components/dashboard/ActivityFeed";
 import { FailureReview } from "../components/workflow/FailureReview";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import {
   Play,
   Activity,

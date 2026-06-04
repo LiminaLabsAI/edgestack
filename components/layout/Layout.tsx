@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { Spinner } from "../ui/Spinner";

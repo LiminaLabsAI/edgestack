@@ -10,6 +10,15 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals.push(
+        '@tauri-apps/api/core',
+        '@tauri-apps/api/event'
+      );
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

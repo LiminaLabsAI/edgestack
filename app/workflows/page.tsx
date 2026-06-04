@@ -5,7 +5,7 @@ import { Layout } from "../../components/layout/Layout";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import { GitBranch, Play, Plus, Trash2, Calendar, CheckCircle } from "lucide-react";
 import Link from "next/link";
 

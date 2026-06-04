@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import { Button } from "../ui/Button";
 import { Spinner } from "../ui/Spinner";
 import { Alert } from "../ui/Alert";
