@@ -106,3 +106,16 @@ fn gpu_speed_label(vendor: &str) -> &'static str {
     else if vendor.contains("AMD") { "ROCm acceleration available" }
     else { "CPU inference mode" }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_scan() {
+        let profile = scan().unwrap();
+        println!("Hardware Profile: {:#?}", profile);
+        assert!(profile.cpu_cores > 0);
+    }
+}
+

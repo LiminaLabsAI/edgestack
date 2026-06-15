@@ -1,7 +1,6 @@
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, copy_bidirectional};
 use anyhow::{anyhow, Result};
-use std::sync::Arc;
 use crate::services::inference_client::InferenceClient;
 use crate::services::config_service;
 
@@ -38,7 +37,7 @@ async fn handle_connection(mut client_stream: TcpStream) -> Result<()> {
     let is_bedrock = request_head.contains("/model/") || request_head.contains("/bedrock-runtime/");
 
     if is_bedrock {
-        let (header, body) = read_full_request(&mut client_stream, &initial_buf).await?;
+        let (_header, body) = read_full_request(&mut client_stream, &initial_buf).await?;
         let body_json: serde_json::Value = serde_json::from_slice(&body).unwrap_or_default();
         let prompt = extract_prompt(&body_json);
 

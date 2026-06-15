@@ -86,16 +86,18 @@ async fn tick_scheduler(pool: &Arc<DbPool>, app: &tauri::AppHandle) -> anyhow::R
     Ok(())
 }
 
-fn extract_schedule_from_yaml(yaml: &str) -> Option<String> {
-    for line in yaml.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("schedule:") {
-            let val = trimmed.trim_start_matches("schedule:").trim().trim_matches('"').trim_matches('\'');
-            return Some(val.to_string());
-        }
-    }
-    None
+#[derive(serde::Deserialize)]
+struct WorkflowScheduleDef {
+    #[serde(default)]
+    schedule: Option<String>,
 }
+
+fn extract_schedule_from_yaml(yaml: &str) -> Option<String> {
+    serde_yaml::from_str::<WorkflowScheduleDef>(yaml)
+        .ok()
+        .and_then(|def| def.schedule)
+}
+
 
 fn parse_schedule_to_cron(schedule_str: &str) -> Option<String> {
     let clean = schedule_str.trim().to_lowercase();

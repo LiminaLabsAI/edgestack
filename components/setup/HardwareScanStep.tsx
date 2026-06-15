@@ -57,17 +57,26 @@ export const HardwareScanStep: React.FC<HardwareScanStepProps> = ({ onNext }) =>
   }, []);
 
   const getTierColor = (tier: string) => {
-    switch (tier?.toLowerCase()) {
-      case "excellent":
-        return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800";
-      case "good":
-        return "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800";
-      case "capable":
-        return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800";
-      default:
-        return "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800";
+    const clean = tier?.toLowerCase() || "";
+    if (
+      clean === "excellent" ||
+      clean === "strong" ||
+      clean === "available" ||
+      clean === "plenty of room" ||
+      clean === "ssd" ||
+      clean === "good"
+    ) {
+      return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800";
     }
+    if (clean === "capable" || clean === "enough space" || clean === "adequate") {
+      return "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800";
+    }
+    if (clean === "limited" || clean === "cpu only") {
+      return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800";
+    }
+    return "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/30 border-gray-200 dark:border-gray-800";
   };
+
 
   if (loading) {
     return (

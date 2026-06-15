@@ -2,8 +2,7 @@ use std::sync::Arc;
 use tauri::State;
 use crate::db::DbPool;
 use crate::models::{CostSummary, DailyCost};
-use crate::services::{inference_client::InferenceClient, config_service};
-use crate::utils::fs::app_dir;
+use crate::services::config_service;
 
 #[tauri::command]
 pub async fn get_cost_summary(pool: State<'_, Arc<DbPool>>, period_days: u32) -> Result<CostSummary, String> {
@@ -74,7 +73,7 @@ pub async fn get_cost_history(pool: State<'_, Arc<DbPool>>) -> Result<Vec<serde_
 }
 
 #[tauri::command]
-pub async fn update_electricity_rate(pool: State<'_, Arc<DbPool>>, rate: f64) -> Result<(), String> {
+pub async fn update_electricity_rate(_pool: State<'_, Arc<DbPool>>, rate: f64) -> Result<(), String> {
     let mut config = config_service::load().unwrap_or_default();
     config.electricity_rate_kwh = rate;
     config_service::save(&config).map_err(|e| e.to_string())

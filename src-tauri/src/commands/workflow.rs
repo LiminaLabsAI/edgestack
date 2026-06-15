@@ -150,6 +150,7 @@ async fn execute_workflow(
     run_id: String,
 ) -> anyhow::Result<()> {
     use tauri::Emitter;
+    use tauri_plugin_notification::NotificationExt;
     use crate::services::inference_client::InferenceClient;
     use crate::services::config_service;
 
@@ -162,11 +163,12 @@ async fn execute_workflow(
         )?
     };
 
-    // Parse steps from YAML (simplified: look for "steps:" section)
     let steps = parse_yaml_steps(&yaml);
     let total = steps.len() as u32;
     let model = config_service::load().map(|c| c.model).unwrap_or_else(|_| "llama3.2:3b".to_string());
     let client = InferenceClient::new(&model);
+
+    let mut step_outputs = std::collections::HashMap::new();
 
     for (i, step) in steps.iter().enumerate() {
         let step_id = new_id();
@@ -189,32 +191,181 @@ async fn execute_workflow(
         // Execute step
         let (success, output, error_msg, tokens) = match step.action.as_str() {
             "ask_ai" => {
-                let prompt = step.params.get("prompt").cloned().unwrap_or_default();
-                match client.generate(&prompt).await {
+                let prompt = step.prompt.clone().unwrap_or_default();
+                let prompt_subbed = substitute_variables(&prompt, &step_outputs);
+                match client.generate(&prompt_subbed).await {
                     Ok(resp) => (true, Some(resp.text), None, Some(resp.tokens_out)),
                     Err(e) => (false, None, Some(e.to_string()), None),
                 }
             },
             "browse_web" => {
-                let url = step.params.get("url").cloned().unwrap_or_default();
-                match reqwest::get(&url).await {
+                let url = step.url.clone().unwrap_or_default();
+                let url_subbed = substitute_variables(&url, &step_outputs);
+                match reqwest::get(&url_subbed).await {
                     Ok(resp) => {
                         let text = resp.text().await.unwrap_or_default();
-                        let snippet = text.chars().take(2000).collect::<String>();
+                        let clean_text = strip_html_tags(&text);
+                        let mut compressed = String::new();
+                        let mut last_was_space = false;
+                        for c in clean_text.chars() {
+                            if c.is_whitespace() {
+                                if !last_was_space {
+                                    compressed.push(' ');
+                                    last_was_space = true;
+                                }
+                            } else {
+                                compressed.push(c);
+                                last_was_space = false;
+                            }
+                        }
+                        let snippet = compressed.trim().chars().take(3000).collect::<String>();
                         (true, Some(snippet), None, None)
                     },
-                    Err(e) => (false, None, Some(format!("Could not reach {}: {}", url, e)), None),
+                    Err(e) => (false, None, Some(format!("Could not reach {}: {}", url_subbed, e)), None),
                 }
             },
-            "send_email" | "save_to_vault" | "http_request" | "send_notification" | "store_in_data_store" | "put_in_queue" => {
-                // Stub: mark as success with a note
-                (true, Some(format!("Step '{}' completed (action: {})", step.name, step.action)), None, None)
+            "save_to_vault" => {
+                let vault = step.vault_name.clone().unwrap_or_else(|| "default".to_string());
+                let vault = substitute_variables(&vault, &step_outputs);
+                let key = step.object_key.clone().unwrap_or_else(|| format!("{}.txt", step.name));
+                let key = substitute_variables(&key, &step_outputs);
+                let data_content = step.data.clone().unwrap_or_default();
+                let data_content = substitute_variables(&data_content, &step_outputs);
+
+                let vault_dir = crate::utils::fs::app_dir().join("vault").join(&vault);
+                if let Err(e) = std::fs::create_dir_all(&vault_dir) {
+                    (false, None, Some(format!("Failed to create vault directory: {}", e)), None)
+                } else {
+                    let file_path = vault_dir.join(&key);
+                    if let Err(e) = std::fs::write(&file_path, &data_content) {
+                        (false, None, Some(format!("Failed to write file to vault: {}", e)), None)
+                    } else {
+                        // Register in SQLite
+                        let id = crate::utils::id::new_id();
+                        let now_str = Utc::now().to_rfc3339();
+                        let size = data_content.len() as i64;
+                        match pool.get() {
+                            Ok(conn) => {
+                                let db_res = conn.execute(
+                                    "INSERT OR REPLACE INTO vault_objects (id, vault_name, object_key, size_bytes, content_type, created_at, last_modified, workflow_id) VALUES (?1, ?2, ?3, ?4, 'text/plain', ?5, ?5, ?6)",
+                                    rusqlite::params![id, vault, key, size, now_str, workflow_id],
+                                );
+                                match db_res {
+                                    Ok(_) => (true, Some(format!("Saved to vault: {}/{}", vault, key)), None, None),
+                                    Err(e) => (false, None, Some(format!("Failed to update database: {}", e)), None),
+                                }
+                            }
+                            Err(e) => (false, None, Some(format!("Failed to get database connection: {}", e)), None),
+                        }
+                    }
+                }
+            },
+            "send_notification" => {
+                let msg = step.message.clone().or(step.data.clone()).unwrap_or_else(|| "Workflow notification".to_string());
+                let msg = substitute_variables(&msg, &step_outputs);
+                let _ = app.notification().builder()
+                    .title(format!("Workflow: {}", step.name))
+                    .body(&msg)
+                    .show();
+                (true, Some(format!("Notification sent: {}", msg)), None, None)
+            },
+            "http_request" => {
+                let target_url = step.url.clone().unwrap_or_default();
+                let target_url = substitute_variables(&target_url, &step_outputs);
+                let body_data = step.data.clone().unwrap_or_default();
+                let body_data = substitute_variables(&body_data, &step_outputs);
+
+                let client = reqwest::Client::new();
+                let req = client.post(&target_url)
+                    .header("Content-Type", "application/json")
+                    .body(body_data);
+
+                match req.send().await {
+                    Ok(resp) => {
+                        let status = resp.status();
+                        let text = resp.text().await.unwrap_or_default();
+                        if status.is_success() {
+                            (true, Some(text), None, None)
+                        } else {
+                            (false, None, Some(format!("HTTP request failed with status {}: {}", status, text)), None)
+                        }
+                    }
+                    Err(e) => (false, None, Some(format!("HTTP request failed: {}", e)), None)
+                }
+            },
+            "write_to_s3" => {
+                let bucket = step.bucket.clone().unwrap_or_else(|| "default-bucket".to_string());
+                let bucket = substitute_variables(&bucket, &step_outputs);
+                let key = step.key.clone().unwrap_or_else(|| format!("{}.txt", step.name));
+                let key = substitute_variables(&key, &step_outputs);
+                let data_content = step.data.clone().unwrap_or_default();
+                let data_content = substitute_variables(&data_content, &step_outputs);
+
+                let s3_url = format!("http://127.0.0.1:4568/{}/{}", bucket, key);
+                let client = reqwest::Client::new();
+                match client.put(&s3_url).body(data_content).send().await {
+                    Ok(resp) => {
+                        if resp.status().is_success() {
+                            (true, Some(format!("Successfully wrote to S3: {}/{}", bucket, key)), None, None)
+                        } else {
+                            (false, None, Some(format!("Failed to write to S3: HTTP {}", resp.status())), None)
+                        }
+                    }
+                    Err(e) => (false, None, Some(format!("S3 upload connection error: {}", e)), None),
+                }
+            },
+            "read_from_s3" => {
+                let bucket = step.bucket.clone().unwrap_or_else(|| "default-bucket".to_string());
+                let bucket = substitute_variables(&bucket, &step_outputs);
+                let key = step.key.clone().unwrap_or_else(|| format!("{}.txt", step.name));
+                let key = substitute_variables(&key, &step_outputs);
+
+                let s3_url = format!("http://127.0.0.1:4568/{}/{}", bucket, key);
+                match reqwest::get(&s3_url).await {
+                    Ok(resp) => {
+                        if resp.status().is_success() {
+                            let text = resp.text().await.unwrap_or_default();
+                            (true, Some(text), None, None)
+                        } else {
+                            (false, None, Some(format!("Failed to read from S3: HTTP {}", resp.status())), None)
+                        }
+                    }
+                    Err(e) => (false, None, Some(format!("S3 download connection error: {}", e)), None),
+                }
+            },
+            "put_in_queue" => {
+                let queue = step.queue_url.clone().unwrap_or_else(|| "default-queue".to_string());
+                let queue = substitute_variables(&queue, &step_outputs);
+                let msg = step.message.clone().or(step.data.clone()).unwrap_or_default();
+                let msg = substitute_variables(&msg, &step_outputs);
+
+                let sqs_url = if queue.starts_with("http") { queue } else { format!("http://127.0.0.1:4568/queue/{}", queue) };
+                let client = reqwest::Client::new();
+                match client.post(&sqs_url)
+                    .form(&[("Action", "SendMessage"), ("MessageBody", &msg)])
+                    .send().await {
+                        Ok(resp) => {
+                            if resp.status().is_success() {
+                                (true, Some(format!("Sent message to queue: {}", sqs_url)), None, None)
+                            } else {
+                                (false, None, Some(format!("Failed SQS publish: HTTP {}", resp.status())), None)
+                            }
+                        }
+                        Err(e) => (false, None, Some(format!("SQS publish connection error: {}", e)), None),
+                    }
+            },
+            "send_email" | "store_in_data_store" => {
+                let note = format!("Step '{}' completed (action: {})", step.name, step.action);
+                (true, Some(note), None, None)
             },
             _ => (true, Some(format!("Step '{}' skipped (unknown action)", step.name)), None, None),
         };
 
         let now2 = Utc::now().to_rfc3339();
         if success {
+            let out_str = output.clone().unwrap_or_default();
+            step_outputs.insert(step.name.clone(), out_str);
+
             {
                 let conn = pool.get()?;
                 conn.execute(
@@ -283,45 +434,82 @@ async fn execute_workflow(
     Ok(())
 }
 
+#[derive(Debug, serde::Deserialize, Clone)]
+struct WorkflowDefinition {
+    #[serde(default)]
+    steps: Vec<ParsedStep>,
+}
+
+#[derive(Debug, serde::Deserialize, Clone)]
 struct ParsedStep {
     name: String,
     action: String,
-    params: std::collections::HashMap<String, String>,
+    #[serde(default)]
+    url: Option<String>,
+    #[serde(default)]
+    prompt: Option<String>,
+    #[serde(default)]
+    vault_name: Option<String>,
+    #[serde(default)]
+    object_key: Option<String>,
+    #[serde(default)]
+    data: Option<String>,
+    #[serde(default)]
+    bucket: Option<String>,
+    #[serde(default)]
+    key: Option<String>,
+    #[serde(default)]
+    queue_url: Option<String>,
+    #[serde(default)]
+    message: Option<String>,
 }
 
 fn parse_yaml_steps(yaml: &str) -> Vec<ParsedStep> {
-    // Simple YAML step parser
-    let mut steps = Vec::new();
-    let mut in_steps = false;
-    let mut current_name = String::new();
-    let mut current_action = String::new();
-    let mut current_params = std::collections::HashMap::new();
+    serde_yaml::from_str::<WorkflowDefinition>(yaml)
+        .map(|def| def.steps)
+        .unwrap_or_else(|e| {
+            println!("YAML parsing failed: {}. Falling back to empty steps.", e);
+            vec![]
+        })
+}
 
-    for line in yaml.lines() {
-        let trimmed = line.trim();
-        if trimmed == "steps:" { in_steps = true; continue; }
-        if !in_steps { continue; }
-        // New step starts with "- name:"
-        if trimmed.starts_with("- name:") {
-            if !current_name.is_empty() {
-                steps.push(ParsedStep { name: current_name.clone(), action: current_action.clone(), params: current_params.clone() });
+fn substitute_variables(text: &str, step_outputs: &std::collections::HashMap<String, String>) -> String {
+    let mut result = text.to_string();
+    for (step_name, output) in step_outputs {
+        let placeholder = format!("{{{{steps.{}.output}}}}", step_name);
+        result = result.replace(&placeholder, output);
+    }
+    result
+}
+
+fn strip_html_tags(html: &str) -> String {
+    let mut output = String::new();
+    let mut in_tag = false;
+    let mut in_script_or_style = false;
+    let mut current_tag = String::new();
+
+    let mut chars = html.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '<' {
+            in_tag = true;
+            current_tag.clear();
+        } else if c == '>' {
+            in_tag = false;
+            let tag_lower = current_tag.to_lowercase();
+            if tag_lower.starts_with("script") || tag_lower.starts_with("style") {
+                in_script_or_style = true;
+            } else if tag_lower == "/script" || tag_lower == "/style" {
+                in_script_or_style = false;
             }
-            current_name = trimmed.trim_start_matches("- name:").trim().trim_matches('"').to_string();
-            current_action = String::new();
-            current_params = std::collections::HashMap::new();
-        } else if trimmed.starts_with("action:") {
-            current_action = trimmed.trim_start_matches("action:").trim().to_string();
-        } else if trimmed.starts_with("url:") {
-            current_params.insert("url".to_string(), trimmed.trim_start_matches("url:").trim().to_string());
-        } else if trimmed.starts_with("prompt:") || trimmed.starts_with("prompt: |") {
-            current_params.insert("prompt".to_string(), trimmed.trim_start_matches("prompt:").trim().to_string());
+        } else if in_tag {
+            current_tag.push(c);
+        } else if !in_script_or_style {
+            output.push(c);
         }
     }
-    if !current_name.is_empty() {
-        steps.push(ParsedStep { name: current_name, action: current_action, params: current_params });
-    }
-    steps
+    output
 }
+
 
 #[tauri::command]
 pub async fn list_runs(pool: State<'_, Arc<DbPool>>, workflow_id: String) -> Result<Vec<WorkflowRun>, String> {

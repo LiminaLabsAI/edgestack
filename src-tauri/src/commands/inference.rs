@@ -131,7 +131,7 @@ pub struct ChatResponse {
 pub async fn generate_chat_response(
     model: String,
     prompt: String,
-    history: serde_json::Value,
+    _history: serde_json::Value,
 ) -> Result<ChatResponse, String> {
     let _ = crate::services::ollama_manager::start_ollama().await;
     let client = InferenceClient::new(&model);

@@ -256,6 +256,30 @@ const initializeLocalStorage = () => {
       theme: "dark"
     }));
   }
+  if (!localStorage.getItem("edgestack_instances")) {
+    localStorage.setItem("edgestack_instances", JSON.stringify([
+      { id: "i-local-a3f8c2d1", name: "alpine-edge", state: "running", image: "Alpine Linux", cpu_cores: 2, memory_gb: 4, disk_gb: 20, uptime_seconds: 43200, created_at: new Date().toISOString() },
+      { id: "i-local-b5f6d7e8", name: "db-primary", state: "stopped", image: "Debian 12", cpu_cores: 4, memory_gb: 8, disk_gb: 40, uptime_seconds: 0, created_at: new Date().toISOString() },
+      { id: "i-local-c9d0e1f2", name: "k3s-control-node", state: "running", image: "Ubuntu 22.04 LTS", cpu_cores: 8, memory_gb: 16, disk_gb: 80, uptime_seconds: 172800, created_at: new Date().toISOString() },
+      { id: "i-local-d3e4f5a6", name: "ollama-worker-1", state: "running", image: "Ubuntu 22.04 LTS", cpu_cores: 4, memory_gb: 8, disk_gb: 50, uptime_seconds: 86400, created_at: new Date().toISOString() }
+    ]));
+  }
+  if (!localStorage.getItem("edgestack_containers")) {
+    localStorage.setItem("edgestack_containers", JSON.stringify([
+      { id: "c-nginx-web", instance_id: "i-local-c9d0e1f2", name: "web-gateway", status: "running", cpu_pct: 1.2, memory_mb: 45, network_io: "1.2 KB/s", block_io: "0 B/s", image: "nginx:alpine", created_at: new Date().toISOString() },
+      { id: "c-postgres-db", instance_id: "i-local-c9d0e1f2", name: "postgres-primary", status: "running", cpu_pct: 0.8, memory_mb: 120, network_io: "512 B/s", block_io: "4.2 KB/s", image: "postgres:15-alpine", created_at: new Date().toISOString() },
+      { id: "c-redis-cache", instance_id: "i-local-d3e4f5a6", name: "redis-shared", status: "running", cpu_pct: 0.2, memory_mb: 15, network_io: "2.1 KB/s", block_io: "0 B/s", image: "redis:alpine", created_at: new Date().toISOString() },
+      { id: "c-ollama-service", instance_id: "i-local-a3f8c2d1", name: "ollama-inference", status: "running", cpu_pct: 12.5, memory_mb: 4300, network_io: "0 B/s", block_io: "12.8 KB/s", image: "ollama/ollama", created_at: new Date().toISOString() },
+      { id: "c-workflow-worker", instance_id: "i-local-a3f8c2d1", name: "workflow-runner-1", status: "running", cpu_pct: 0.5, memory_mb: 85, network_io: "124 B/s", block_io: "0 B/s", image: "python:3.11-slim", created_at: new Date().toISOString() },
+      { id: "c-telemetry-agent", instance_id: "i-local-a3f8c2d1", name: "sys-metrics-collector", status: "running", cpu_pct: 0.4, memory_mb: 32, network_io: "340 B/s", block_io: "0 B/s", image: "gcr.io/cadvisor:latest", created_at: new Date().toISOString() },
+      { id: "c-db-sync", instance_id: "i-local-b5f6d7e8", name: "backup-agent", status: "stopped", cpu_pct: 0.0, memory_mb: 0, network_io: "0 B/s", block_io: "0 B/s", image: "restic/restic:latest", created_at: new Date().toISOString() },
+      { id: "c-cert-manager", instance_id: "i-local-c9d0e1f2", name: "cert-manager", status: "running", cpu_pct: 0.1, memory_mb: 28, network_io: "45 B/s", block_io: "0 B/s", image: "cert-manager-controller:v1.12.0", created_at: new Date().toISOString() },
+      { id: "c-fluent-bit", instance_id: "i-local-c9d0e1f2", name: "log-shipper", status: "running", cpu_pct: 0.6, memory_mb: 18, network_io: "4.8 KB/s", block_io: "1.2 KB/s", image: "fluent/fluent-bit:latest", created_at: new Date().toISOString() },
+      { id: "c-node-exporter", instance_id: "i-local-c9d0e1f2", name: "node-exporter", status: "running", cpu_pct: 0.3, memory_mb: 12, network_io: "180 B/s", block_io: "0 B/s", image: "prom/node-exporter:latest", created_at: new Date().toISOString() },
+      { id: "c-app-proxy", instance_id: "i-local-d3e4f5a6", name: "envoy-sidecar", status: "running", cpu_pct: 0.7, memory_mb: 24, network_io: "3.2 KB/s", block_io: "0 B/s", image: "envoyproxy/envoy:v1.26.0", created_at: new Date().toISOString() },
+      { id: "c-auth-portal", instance_id: "i-local-d3e4f5a6", name: "oauth2-proxy", status: "running", cpu_pct: 0.4, memory_mb: 22, network_io: "150 B/s", block_io: "0 B/s", image: "bitnami/oauth2-proxy:latest", created_at: new Date().toISOString() }
+    ]));
+  }
 };
 
 initializeLocalStorage();
@@ -1129,6 +1153,223 @@ You can review this pipeline and click **"Apply YAML to Editor"** above to load 
       return {
         text: "I am EdgeStack's local AI engine. I processed your request completely offline. The outputs are generated and verified on your CPU/GPU cores safely."
       };
+    }
+
+    case "import_file_to_vault": {
+      const { vaultName, srcPath } = args;
+      const file_name = srcPath.split(/[\\/]/).pop() || "uploaded_file.txt";
+      const vaults = JSON.parse(localStorage.getItem("edgestack_vaults") || "[]");
+      const vaultObjects = JSON.parse(localStorage.getItem("edgestack_vault_objects") || "[]");
+      
+      const newObj = {
+        key: file_name,
+        size_bytes: 1024 + Math.floor(Math.random() * 5000),
+        last_modified: new Date().toISOString(),
+        content_type: file_name.endsWith(".json") ? "application/json" : "text/plain",
+        workflow_name: null
+      };
+      
+      // Remove previous duplicate key in same vault
+      const filtered = vaultObjects.filter((o: any) => !(o.key === file_name && vaults.some((v: any) => v.name === vaultName)));
+      filtered.unshift(newObj);
+      localStorage.setItem("edgestack_vault_objects", JSON.stringify(filtered));
+      
+      // Update stats
+      const vIdx = vaults.findIndex((v: any) => v.name === vaultName);
+      if (vIdx !== -1) {
+        vaults[vIdx].object_count += 1;
+        vaults[vIdx].total_size_bytes += newObj.size_bytes;
+        vaults[vIdx].last_modified = new Date().toISOString();
+        localStorage.setItem("edgestack_vaults", JSON.stringify(vaults));
+      }
+      return true;
+    }
+
+    case "download_vault_object": {
+      return true;
+    }
+
+    case "list_instances": {
+      return JSON.parse(localStorage.getItem("edgestack_instances") || "[]");
+    }
+
+    case "create_instance": {
+      const { name, image, cpuCores, memoryGb, diskGb } = args;
+      const id = `i-local-${Math.random().toString(36).substr(2, 8)}`;
+      const instances = JSON.parse(localStorage.getItem("edgestack_instances") || "[]");
+      const newInst = {
+        id,
+        name,
+        state: "running",
+        image,
+        cpu_cores: cpuCores,
+        memory_gb: memoryGb,
+        disk_gb: diskGb,
+        uptime_seconds: 0,
+        created_at: new Date().toISOString()
+      };
+      instances.push(newInst);
+      localStorage.setItem("edgestack_instances", JSON.stringify(instances));
+
+      // Add a container
+      const containers = JSON.parse(localStorage.getItem("edgestack_containers") || "[]");
+      containers.push({
+        id: `c-${name.toLowerCase().replace(/[^a-z0-9]/g, "")}-app`,
+        instance_id: id,
+        name: `${name.toLowerCase().replace(/[^a-z0-9]/g, "")}-service`,
+        status: "running",
+        cpu_pct: 0.5,
+        memory_mb: 64,
+        network_io: "128 B/s",
+        block_io: "0 B/s",
+        image: "alpine:latest",
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem("edgestack_containers", JSON.stringify(containers));
+      return id;
+    }
+
+    case "start_instance": {
+      const { id } = args;
+      const instances = JSON.parse(localStorage.getItem("edgestack_instances") || "[]");
+      const idx = instances.findIndex((i: any) => i.id === id);
+      if (idx !== -1) {
+        instances[idx].state = "running";
+        instances[idx].uptime_seconds = 60;
+        localStorage.setItem("edgestack_instances", JSON.stringify(instances));
+      }
+      // Start containers
+      const containers = JSON.parse(localStorage.getItem("edgestack_containers") || "[]");
+      containers.forEach((c: any) => {
+        if (c.instance_id === id) {
+          c.status = "running";
+          c.cpu_pct = 0.5;
+          c.memory_mb = 64;
+        }
+      });
+      localStorage.setItem("edgestack_containers", JSON.stringify(containers));
+      return true;
+    }
+
+    case "stop_instance": {
+      const { id } = args;
+      const instances = JSON.parse(localStorage.getItem("edgestack_instances") || "[]");
+      const idx = instances.findIndex((i: any) => i.id === id);
+      if (idx !== -1) {
+        instances[idx].state = "stopped";
+        instances[idx].uptime_seconds = 0;
+        localStorage.setItem("edgestack_instances", JSON.stringify(instances));
+      }
+      // Stop containers
+      const containers = JSON.parse(localStorage.getItem("edgestack_containers") || "[]");
+      containers.forEach((c: any) => {
+        if (c.instance_id === id) {
+          c.status = "stopped";
+          c.cpu_pct = 0.0;
+          c.memory_mb = 0;
+        }
+      });
+      localStorage.setItem("edgestack_containers", JSON.stringify(containers));
+      return true;
+    }
+
+    case "restart_instance": {
+      const { id } = args;
+      const instances = JSON.parse(localStorage.getItem("edgestack_instances") || "[]");
+      const idx = instances.findIndex((i: any) => i.id === id);
+      if (idx !== -1) {
+        instances[idx].state = "running";
+        instances[idx].uptime_seconds = 5;
+        localStorage.setItem("edgestack_instances", JSON.stringify(instances));
+      }
+      // Restart containers
+      const containers = JSON.parse(localStorage.getItem("edgestack_containers") || "[]");
+      containers.forEach((c: any) => {
+        if (c.instance_id === id) {
+          c.status = "running";
+          c.cpu_pct = 0.8;
+          c.memory_mb = 72;
+        }
+      });
+      localStorage.setItem("edgestack_containers", JSON.stringify(containers));
+      return true;
+    }
+
+    case "delete_instance": {
+      const { id } = args;
+      let instances = JSON.parse(localStorage.getItem("edgestack_instances") || "[]");
+      instances = instances.filter((i: any) => i.id !== id);
+      localStorage.setItem("edgestack_instances", JSON.stringify(instances));
+      
+      let containers = JSON.parse(localStorage.getItem("edgestack_containers") || "[]");
+      containers = containers.filter((c: any) => c.instance_id !== id);
+      localStorage.setItem("edgestack_containers", JSON.stringify(containers));
+      return true;
+    }
+
+    case "list_active_containers": {
+      return JSON.parse(localStorage.getItem("edgestack_containers") || "[]");
+    }
+
+    case "get_compute_telemetry": {
+      const instances = JSON.parse(localStorage.getItem("edgestack_instances") || "[]");
+      const containers = JSON.parse(localStorage.getItem("edgestack_containers") || "[]");
+      
+      const total = instances.length;
+      const activeInst = instances.filter((i: any) => i.state === "running").length;
+      const activeCont = containers.filter((c: any) => c.status === "running").length;
+      
+      // fluctuate metrics slightly
+      const randomFluctuation = (Math.random() - 0.5) * 5; // -2.5% to +2.5%
+      const cpu = Math.min(100, Math.max(5, 24.5 + randomFluctuation));
+      const ram = Math.min(100, Math.max(10, 58.2 + randomFluctuation * 0.5));
+      const disk = 44.8; // disk doesn't fluctuate much
+
+      return {
+        cpu_percent: cpu,
+        memory_percent: ram,
+        disk_percent: disk,
+        active_instances: activeInst,
+        total_instances: total,
+        active_containers: activeCont
+      };
+    }
+
+    case "execute_container_command": {
+      const { containerId, command } = args;
+      const clean_cmd = (command || "").trim();
+      if (!clean_cmd) return "";
+      
+      const parts = clean_cmd.split(/\s+/);
+      const main_cmd = parts[0].toLowerCase();
+      
+      switch (main_cmd) {
+        case "help":
+          return "Available commands:\n  help      - Show this help list\n  ls        - List directory contents\n  pwd       - Print working directory\n  uname -a  - Print operating system details\n  top       - Show process dashboard\n  ps        - List active processes\n  cat <file>- Read mock files\n  clear     - Reset screen";
+        case "ls":
+          return "total 24\ndrwxr-xr-x    1 root     root          4096 Jun 15 08:00 .\ndrwxr-xr-x    1 root     root          4096 Jun 15 08:00 ..\n-rw-r--r--    1 root     root           128 Jun 15 08:02 app.py\n-rw-r--r--    1 root     root            45 Jun 15 08:00 config.json\ndrwxr-xr-x    2 root     root          4096 Jun 15 08:00 logs";
+        case "pwd":
+          return "/workspace";
+        case "uname":
+          if (parts.includes("-a")) {
+            return `Linux ${containerId} 6.1.0-21-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.90-1 (2026-06-15) x86_64 GNU/Linux`;
+          }
+          return "Linux";
+        case "cat":
+          if (parts.length < 2) return "Usage: cat <filename>";
+          const filename = parts[1];
+          if (filename === "config.json") {
+            return "{\n  \"env\": \"production\",\n  \"port\": 8080,\n  \"debug\": false\n}";
+          } else if (filename === "app.py") {
+            return "import os\nprint('Starting service container...')\n# Mock service container daemon";
+          }
+          return `cat: ${filename}: No such file or directory`;
+        case "top":
+        case "ps":
+          return "PID   USER     TIME  COMMAND\n    1 root      0:05 python app.py\n   12 root      0:00 ps\nContainer active on host node. System overhead: normal.";
+        default:
+          return `${main_cmd}: command not found. Type 'help' for suggestions.`;
+      }
     }
 
     default:

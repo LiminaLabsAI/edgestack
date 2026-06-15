@@ -1,8 +1,5 @@
-use tauri::State;
-use std::sync::Arc;
-use crate::db::DbPool;
-use crate::models::{HardwareProfile, ModelOption, BenchmarkResult, AppConfig};
-use crate::services::{hardware_scanner, inference_client::InferenceClient, config_service};
+use crate::models::{HardwareProfile, ModelOption};
+use crate::services::{hardware_scanner, config_service};
 
 #[tauri::command]
 pub async fn scan_hardware() -> Result<HardwareProfile, String> {

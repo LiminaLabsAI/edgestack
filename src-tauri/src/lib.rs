@@ -93,6 +93,18 @@ pub fn run() {
             commands::vault::list_vault_objects,
             commands::vault::create_vault,
             commands::vault::delete_vault_object,
+            commands::vault::import_file_to_vault,
+            commands::vault::download_vault_object,
+            // Compute
+            commands::compute::list_instances,
+            commands::compute::create_instance,
+            commands::compute::start_instance,
+            commands::compute::stop_instance,
+            commands::compute::restart_instance,
+            commands::compute::delete_instance,
+            commands::compute::list_active_containers,
+            commands::compute::get_compute_telemetry,
+            commands::compute::execute_container_command,
             // Costs
             commands::cost::get_cost_summary,
             commands::cost::get_cost_history,

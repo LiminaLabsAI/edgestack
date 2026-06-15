@@ -34,3 +34,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Bundled JRE (Tauri build dependency — do not commit)
+/jre/
+
+# Local S3 data (runtime object storage — do not commit)
+/s3/
+
+# Tauri build outputs
+/src-tauri/target/

@@ -6,3 +6,4 @@ pub mod vault;
 pub mod cost;
 pub mod settings;
 pub mod telemetry;
+pub mod compute;

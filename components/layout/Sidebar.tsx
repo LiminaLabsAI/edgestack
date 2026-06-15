@@ -14,7 +14,8 @@ import {
   Workflow,
   MessageSquare,
   GitCompare,
-  Cpu
+  Cpu,
+  Server
 } from "lucide-react";
 
 interface SidebarProps {
@@ -26,11 +27,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ notificationCount = 0 }) => {
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Compute", href: "/compute", icon: Server },
+    { name: "Storage", href: "/storage", icon: Database },
     { name: "Workflows", href: "/workflows", icon: GitBranch },
     { name: "AI Chat Playground", href: "/playground", icon: MessageSquare },
     { name: "Model Arena", href: "/compare", icon: GitCompare },
     { name: "Models Hub", href: "/models", icon: Cpu },
-    { name: "Object Vault", href: "/vault", icon: Database },
     { name: "Agent Metrics", href: "/agents", icon: Users },
     { name: "Cost Analytics", href: "/costs", icon: Coins },
     { name: "Activity Logs", href: "/logs", icon: FileText },
