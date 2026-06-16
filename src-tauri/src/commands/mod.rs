@@ -7,3 +7,4 @@ pub mod cost;
 pub mod settings;
 pub mod telemetry;
 pub mod compute;
+pub mod governance;

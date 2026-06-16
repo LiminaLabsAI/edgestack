@@ -15,7 +15,8 @@ import {
   MessageSquare,
   GitCompare,
   Cpu,
-  Server
+  Server,
+  ShieldCheck
 } from "lucide-react";
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ notificationCount = 0 }) => {
     { name: "Model Arena", href: "/compare", icon: GitCompare },
     { name: "Models Hub", href: "/models", icon: Cpu },
     { name: "Agent Metrics", href: "/agents", icon: Users },
+    { name: "Governance", href: "/governance", icon: ShieldCheck },
     { name: "Cost Analytics", href: "/costs", icon: Coins },
     { name: "Activity Logs", href: "/logs", icon: FileText },
     { name: "Settings", href: "/settings", icon: Settings },

@@ -168,6 +168,9 @@ async fn execute_workflow(
     let model = config_service::load().map(|c| c.model).unwrap_or_else(|_| "llama3.2:3b".to_string());
     let client = InferenceClient::new(&model);
 
+    // Governance engine: policy enforcement on every step
+    let governance = crate::services::governance::GovernanceEngine::new(pool.clone());
+
     let mut step_outputs = std::collections::HashMap::new();
 
     for (i, step) in steps.iter().enumerate() {
@@ -188,13 +191,71 @@ async fn execute_workflow(
             "total_steps": total
         }));
 
+        // ── Governance check ────────────────────────────────────────────────
+        let gov_ctx = crate::services::governance::PolicyCheckContext {
+            workflow_id: workflow_id.clone(),
+            workflow_name: String::new(), // name not needed for engine
+            run_id: run_id.clone(),
+            step_name: step.name.clone(),
+            action_type: step.action.clone(),
+            url: step.url.clone().or_else(|| step.bucket.as_ref().map(|b|
+                format!("s3://{}/{}", b, step.key.as_deref().unwrap_or(""))
+            )),
+            tokens_requested: None, // will be checked after inference
+            has_data_tag: step.data_tag.is_some(),
+        };
+        match governance.check(&gov_ctx).await {
+            crate::services::governance::PolicyDecision::Block { reason, .. } => {
+                let now2 = Utc::now().to_rfc3339();
+                {
+                    let conn = pool.get()?;
+                    conn.execute(
+                        "UPDATE step_executions SET status='failed', completed_at=?1, error_message=?2 WHERE id=?3",
+                        rusqlite::params![now2, format!("[GOVERNANCE BLOCK] {}", reason), step_id],
+                    )?;
+                    conn.execute(
+                        "UPDATE workflow_runs SET status='paused_awaiting_human', failure_step=?1, failure_raw_log=?2 WHERE id=?3",
+                        rusqlite::params![step.name, format!("[GOVERNANCE BLOCK] {}", reason), run_id],
+                    )?;
+                }
+                let _ = app.emit("workflow_failed", serde_json::json!({
+                    "run_id": run_id,
+                    "workflow_id": workflow_id,
+                    "step_name": step.name,
+                    "step_index": i + 1,
+                    "total_steps": total,
+                    "error": format!("[GOVERNANCE BLOCK] {}", reason),
+                    "ai_explanation": reason
+                }));
+                return Ok(());
+            },
+            crate::services::governance::PolicyDecision::Warn { reason, .. } => {
+                let _ = app.emit("governance_warning", serde_json::json!({
+                    "run_id": run_id,
+                    "step_name": step.name,
+                    "reason": reason
+                }));
+            },
+            crate::services::governance::PolicyDecision::Allow => {}
+        }
+        // ── End governance check ────────────────────────────────────────────
+
         // Execute step
         let (success, output, error_msg, tokens) = match step.action.as_str() {
             "ask_ai" => {
                 let prompt = step.prompt.clone().unwrap_or_default();
                 let prompt_subbed = substitute_variables(&prompt, &step_outputs);
                 match client.generate(&prompt_subbed).await {
-                    Ok(resp) => (true, Some(resp.text), None, Some(resp.tokens_out)),
+                    Ok(resp) => {
+                        // Apply PII filter if any matching policy requests it
+                        let output_text = resp.text;
+                        let final_text = if step.pii_filter.unwrap_or(false) {
+                            crate::services::governance::filter_pii(&output_text)
+                        } else {
+                            output_text
+                        };
+                        (true, Some(final_text), None, Some(resp.tokens_out))
+                    },
                     Err(e) => (false, None, Some(e.to_string()), None),
                 }
             },
@@ -462,6 +523,12 @@ struct ParsedStep {
     queue_url: Option<String>,
     #[serde(default)]
     message: Option<String>,
+    /// Governance: data classification tag (e.g. "public" | "internal" | "confidential")
+    #[serde(default)]
+    data_tag: Option<String>,
+    /// Governance: if true, PII is stripped from AI output before storing
+    #[serde(default)]
+    pii_filter: Option<bool>,
 }
 
 fn parse_yaml_steps(yaml: &str) -> Vec<ParsedStep> {

@@ -42,4 +42,5 @@ cron = "0.12"
 once_cell = "1"
 dirs-next = "2"
 serde_yaml = "0.9"
+regex = "1"
 

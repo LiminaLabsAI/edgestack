@@ -11,3 +11,4 @@ pub mod telemetry_collector;
 pub mod floci_manager;
 pub mod bedrock_interceptor;
 pub mod scheduler;
+pub mod governance;

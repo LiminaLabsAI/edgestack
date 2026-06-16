@@ -188,6 +188,34 @@ CREATE TABLE IF NOT EXISTS compute_containers (
     FOREIGN KEY (instance_id) REFERENCES compute_instances(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS governance_policies (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    enabled INTEGER DEFAULT 1,
+    action_type TEXT NOT NULL,  -- 'ask_ai' | 'browse_web' | 'http_request' | 'save_to_vault' | 'write_to_s3' | '*'
+    effect TEXT NOT NULL,       -- 'block' | 'warn' | 'audit'
+    conditions_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id TEXT PRIMARY KEY,
+    timestamp TEXT NOT NULL,
+    workflow_id TEXT,
+    run_id TEXT,
+    step_name TEXT,
+    action_type TEXT NOT NULL,
+    policy_id TEXT,
+    policy_name TEXT,
+    decision TEXT NOT NULL,     -- 'allow' | 'block' | 'warn' | 'audit'
+    reason TEXT,
+    context_url TEXT,
+    tokens_requested INTEGER,
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_workflow_runs_workflow_id ON workflow_runs(workflow_id);
 CREATE INDEX IF NOT EXISTS idx_workflow_runs_status ON workflow_runs(status);
@@ -196,6 +224,9 @@ CREATE INDEX IF NOT EXISTS idx_telemetry_captured_at ON telemetry(captured_at);
 CREATE INDEX IF NOT EXISTS idx_cost_estimates_period ON cost_estimates(period_start, period_end);
 CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(read_at) WHERE read_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_compute_containers_instance_id ON compute_containers(instance_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_audit_log_workflow ON audit_log(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_decision ON audit_log(decision);
 "#;
 
 pub fn run_migrations(pool: &DbPool) -> Result<()> {

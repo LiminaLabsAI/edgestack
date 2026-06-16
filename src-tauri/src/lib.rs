@@ -117,6 +117,15 @@ pub fn run() {
             commands::settings::delete_secret,
             // Telemetry
             commands::telemetry::get_agent_metrics,
+            // Governance & Compliance
+            commands::governance::list_policies,
+            commands::governance::create_policy,
+            commands::governance::update_policy,
+            commands::governance::toggle_policy,
+            commands::governance::delete_policy,
+            commands::governance::list_audit_log,
+            commands::governance::get_compliance_summary,
+            commands::governance::export_policies_yaml,
         ])
         .run(tauri::generate_context!())
         .expect("error while running EdgeStack");

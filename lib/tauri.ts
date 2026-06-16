@@ -1372,6 +1372,173 @@ You can review this pipeline and click **"Apply YAML to Editor"** above to load 
       }
     }
 
+    // ── Governance & Compliance ────────────────────────────────────────────────
+
+    case "list_policies": {
+      if (!(window as any).__mock_policies) {
+        (window as any).__mock_policies = [
+          {
+            id: "policy-001",
+            name: "Block External HTTP Calls",
+            description: "Prevents workflows from making HTTP requests to non-allowlisted domains",
+            enabled: true,
+            action_type: "http_request",
+            effect: "block",
+            conditions: {
+              url_allowlist: ["api.stripe.com", "hooks.slack.com", "api.sendgrid.com"],
+            },
+            created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+            updated_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+          },
+          {
+            id: "policy-002",
+            name: "AI Token Budget (50K/day)",
+            description: "Caps AI token usage per workflow to 50,000 tokens per day to control costs",
+            enabled: true,
+            action_type: "ask_ai",
+            effect: "block",
+            conditions: {
+              max_tokens_per_day: 50000,
+            },
+            created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+            updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+          },
+          {
+            id: "policy-003",
+            name: "PII Output Filter",
+            description: "Strips emails, phone numbers, and credit card patterns from AI-generated output before storage",
+            enabled: true,
+            action_type: "ask_ai",
+            effect: "warn",
+            conditions: {
+              pii_filter_output: true,
+            },
+            created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+            updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+          },
+          {
+            id: "policy-004",
+            name: "Require Data Classification Tag",
+            description: "All vault save operations must include a data_tag field (public / internal / confidential)",
+            enabled: false,
+            action_type: "save_to_vault",
+            effect: "block",
+            conditions: {
+              require_data_tag: true,
+            },
+            created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+            updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+          },
+          {
+            id: "policy-005",
+            name: "Rate Limit Web Browsing (10/hr)",
+            description: "Prevents excessive web scraping — max 10 browse_web calls per hour per workflow",
+            enabled: true,
+            action_type: "browse_web",
+            effect: "warn",
+            conditions: {
+              max_calls_per_hour: 10,
+            },
+            created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+            updated_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+          },
+        ];
+      }
+      return (window as any).__mock_policies;
+    }
+
+    case "create_policy": {
+      if (!(window as any).__mock_policies) (window as any).__mock_policies = [];
+      const newId = "policy-" + Math.random().toString(36).slice(2, 8);
+      const newPolicy = {
+        id: newId,
+        name: args.name,
+        description: args.description || null,
+        enabled: true,
+        action_type: args.action_type,
+        effect: args.effect,
+        conditions: args.conditions || {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      (window as any).__mock_policies = [...((window as any).__mock_policies || []), newPolicy];
+      return newId;
+    }
+
+    case "update_policy": {
+      const policies = (window as any).__mock_policies || [];
+      (window as any).__mock_policies = policies.map((p: any) =>
+        p.id === args.id
+          ? { ...p, ...args, updated_at: new Date().toISOString() }
+          : p
+      );
+      return null;
+    }
+
+    case "toggle_policy": {
+      const policies = (window as any).__mock_policies || [];
+      (window as any).__mock_policies = policies.map((p: any) =>
+        p.id === args.id ? { ...p, enabled: args.enabled, updated_at: new Date().toISOString() } : p
+      );
+      return null;
+    }
+
+    case "delete_policy": {
+      const policies = (window as any).__mock_policies || [];
+      (window as any).__mock_policies = policies.filter((p: any) => p.id !== args.id);
+      return null;
+    }
+
+    case "list_audit_log": {
+      const limit = args.limit || 100;
+      const wfFilter = args.workflow_id;
+      const decFilter = args.decision_filter;
+
+      const mockAudit = [
+        { id: "al-001", timestamp: new Date(Date.now() - 1000 * 60 * 2).toISOString(), workflow_id: "wf_customer_support", workflow_name: "Customer Support Automation", run_id: "run-abc1", step_name: "generate_support_reply", action_type: "ask_ai", policy_id: "policy-002", policy_name: "AI Token Budget (50K/day)", decision: "allow", reason: null, context_url: null, tokens_requested: 1200 },
+        { id: "al-002", timestamp: new Date(Date.now() - 1000 * 60 * 8).toISOString(), workflow_id: "wf_lead_enrichment", workflow_name: "Lead Enrichment Agent", run_id: "run-abc2", step_name: "fetch_pricing_page", action_type: "browse_web", policy_id: "policy-005", policy_name: "Rate Limit Web Browsing (10/hr)", decision: "warn", reason: "8 browse_web calls in the last hour (limit: 10)", context_url: "https://competitor.com/pricing", tokens_requested: null },
+        { id: "al-003", timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(), workflow_id: "wf_customer_support", workflow_name: "Customer Support Automation", run_id: "run-abc3", step_name: "call_payment_api", action_type: "http_request", policy_id: "policy-001", policy_name: "Block External HTTP Calls", decision: "block", reason: "URL 'https://unknown-api.io/endpoint' is not in the allowed list", context_url: "https://unknown-api.io/endpoint", tokens_requested: null },
+        { id: "al-004", timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), workflow_id: "wf_lead_enrichment", workflow_name: "Lead Enrichment Agent", run_id: "run-abc4", step_name: "extract_price_points", action_type: "ask_ai", policy_id: "policy-003", policy_name: "PII Output Filter", decision: "warn", reason: "PII filter applied — email patterns detected in AI output", context_url: null, tokens_requested: 850 },
+        { id: "al-005", timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), workflow_id: "wf_customer_support", workflow_name: "Customer Support Automation", run_id: "run-abc5", step_name: "save_draft_to_vault", action_type: "save_to_vault", policy_id: "policy-004", policy_name: "Require Data Classification Tag", decision: "allow", reason: null, context_url: null, tokens_requested: null },
+        { id: "al-006", timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(), workflow_id: "wf_customer_support", workflow_name: "Customer Support Automation", run_id: "run-abc6", step_name: "fetch_support_ticket", action_type: "browse_web", policy_id: "policy-005", policy_name: "Rate Limit Web Browsing (10/hr)", decision: "allow", reason: null, context_url: "https://api.mybusiness.com/tickets/latest", tokens_requested: null },
+        { id: "al-007", timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(), workflow_id: "wf_lead_enrichment", workflow_name: "Lead Enrichment Agent", run_id: "run-abc7", step_name: "post_to_webhook", action_type: "http_request", policy_id: "policy-001", policy_name: "Block External HTTP Calls", decision: "block", reason: "URL 'https://hooks.zapier.com/catch/xyz' is not in the allowed list", context_url: "https://hooks.zapier.com/catch/xyz", tokens_requested: null },
+        { id: "al-008", timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(), workflow_id: "wf_customer_support", workflow_name: "Customer Support Automation", run_id: "run-abc8", step_name: "generate_report", action_type: "ask_ai", policy_id: "policy-002", policy_name: "AI Token Budget (50K/day)", decision: "allow", reason: null, context_url: null, tokens_requested: 2400 },
+      ];
+
+      let filtered = mockAudit;
+      if (wfFilter) filtered = filtered.filter((a: any) => a.workflow_id === wfFilter);
+      if (decFilter && decFilter !== "all") filtered = filtered.filter((a: any) => a.decision === decFilter);
+      return filtered.slice(0, limit);
+    }
+
+    case "get_compliance_summary": {
+      const policies = (window as any).__mock_policies || [];
+      const activePolicies = policies.filter((p: any) => p.enabled).length;
+      return {
+        total_policies: policies.length,
+        active_policies: activePolicies,
+        compliance_score: 73,
+        audit_events_today: 8,
+        blocks_today: 2,
+        warns_today: 2,
+        allows_today: 4,
+        blocks_week: 5,
+        top_violations: [
+          { policy_name: "Block External HTTP Calls", count: 3 },
+          { policy_name: "Rate Limit Web Browsing (10/hr)", count: 2 },
+          { policy_name: "PII Output Filter", count: 1 },
+        ],
+      };
+    }
+
+    case "export_policies_yaml": {
+      const policies = (window as any).__mock_policies || [];
+      const yaml = policies.map((p: any) =>
+        `- id: ${p.id}\n  name: "${p.name}"\n  action_type: ${p.action_type}\n  effect: ${p.effect}\n  enabled: ${p.enabled}`
+      ).join("\n");
+      return `# EdgeStack Governance Policies\n# Exported: ${new Date().toISOString()}\n\n${yaml}`;
+    }
+
     default:
       console.warn(`Unrecognized mock invoke command: ${cmd}`, args);
       throw new Error(`Command '${cmd}' not supported by simulation bridge.`);
