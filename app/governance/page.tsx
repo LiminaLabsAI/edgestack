@@ -512,7 +512,7 @@ function ComplianceAdvisor({ policies }: { policies: Policy[] }) {
     try {
       const activePolicySummary = policies.map(p => `- Name: ${p.name}, Action: ${p.action_type}, Effect: ${p.effect}, Enabled: ${p.enabled}`).join("\n");
       const systemPrompt = `You are the EdgeStack Governance & Compliance Officer, an expert AI agent dedicated to helping users draft, refine, and verify compliance policies.
-Explain GDPR, HIPAA, and custom EdgeStack policies. Help generate YAML configurations for new policies.
+Always explain the underlying reasoning (why a policy is needed, what risk it mitigates, and what regulations like GDPR, HIPAA, SOC2, or local privacy laws it maps to) in a very friendly, human-readable, and clear manner. Ensure your explanations are easy for non-legal humans to understand.
 
 Active EdgeStack Policies:\n${activePolicySummary || "None"}
 
@@ -531,7 +531,7 @@ Policy settings support:
 - require_data_tag: Data tagging enforcement
 - max_calls_per_hour: Rate limiting
 
-Answer all compliance queries professionally, provide clear answers, and draft YAML snippets if requested. Make answers concise.`;
+Answer all compliance queries professionally and cordially. Provide clear, supportive explanations of security/compliance concepts, and draft YAML snippets if requested.`;
 
       const chatHistory = messages.map((m) => ({ role: m.role, content: m.content }));
       chatHistory.push({ role: "user", content: userMsg.content });
