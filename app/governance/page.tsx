@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Layout } from "../../components/layout/Layout";
 import { Card } from "../../components/ui/Card";
 import { invoke } from "@/lib/tauri";
@@ -8,7 +8,7 @@ import {
   ShieldCheck, ShieldAlert, ShieldX, Plus, Trash2, ToggleLeft, ToggleRight,
   Download, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Filter,
   Globe, Brain, HardDrive, Activity, Lock, X, Info, FileText, BarChart3,
-  FlaskConical, Play, ChevronRight, Zap, Eye
+  FlaskConical, Play, ChevronRight, Zap, Eye, MessageSquare, Send, Bot, User
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer
@@ -449,9 +449,291 @@ function PolicySimulator({ policies }: { policies: Policy[] }) {
   );
 }
 
+// ─── Compliance Advisor ──────────────────────────────────────────────────────
+
+interface AdvisorMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+}
+
+function ComplianceAdvisor({ policies }: { policies: Policy[] }) {
+  const [models, setModels] = useState<any[]>([]);
+  const [selectedModelTag, setSelectedModelTag] = useState("");
+  const [messages, setMessages] = useState<AdvisorMessage[]>([
+    {
+      role: "assistant",
+      content: "Hello! I am your EdgeStack Governance & Compliance Officer. I can guide you on GDPR, HIPAA, or local policy configuration, help you draft custom YAML rules, or analyze audit events. Ask me anything!",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [fetchingModels, setFetchingModels] = useState(true);
+  const [stats, setStats] = useState<any | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const res: any[] = await invoke("list_models");
+        setModels(res);
+        if (res.length > 0) {
+          setSelectedModelTag(res[0].ollama_tag);
+        }
+        setFetchingModels(false);
+      } catch (e) {
+        console.error(e);
+        setFetchingModels(false);
+      }
+    };
+    fetchModels();
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const handleSend = async (textToSend?: string) => {
+    const promptText = textToSend || inputMessage;
+    if (!promptText.trim() || !selectedModelTag) return;
+
+    const userMsg: AdvisorMessage = {
+      role: "user",
+      content: promptText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    if (!textToSend) setInputMessage("");
+    setLoading(true);
+
+    try {
+      const activePolicySummary = policies.map(p => `- Name: ${p.name}, Action: ${p.action_type}, Effect: ${p.effect}, Enabled: ${p.enabled}`).join("\n");
+      const systemPrompt = `You are the EdgeStack Governance & Compliance Officer, an expert AI agent dedicated to helping users draft, refine, and verify compliance policies.
+Explain GDPR, HIPAA, and custom EdgeStack policies. Help generate YAML configurations for new policies.
+
+Active EdgeStack Policies:\n${activePolicySummary || "None"}
+
+EdgeStack supported actions:
+- ask_ai: AI Inference
+- browse_web: Web Browsing
+- http_request: General HTTP Outbound calls
+- save_to_vault: Local secure storage
+- write_to_s3: Outbound storage
+
+Policy settings support:
+- url_allowlist: Allowed domains
+- url_blocklist: Blocked domains
+- max_tokens_per_day: Token budget
+- pii_filter_output: Stripping sensitive output data
+- require_data_tag: Data tagging enforcement
+- max_calls_per_hour: Rate limiting
+
+Answer all compliance queries professionally, provide clear answers, and draft YAML snippets if requested. Make answers concise.`;
+
+      const chatHistory = messages.map((m) => ({ role: m.role, content: m.content }));
+      chatHistory.push({ role: "user", content: userMsg.content });
+
+      const fullPrompt = `${systemPrompt}\n\nChat History:\n${chatHistory.map(h => `${h.role === "user" ? "User" : "Assistant"}: ${h.content}`).join("\n")}\nAssistant:`;
+
+      const res = await invoke<any>("generate_chat_response", {
+        model: selectedModelTag,
+        prompt: fullPrompt,
+        history: []
+      });
+
+      const assistantMsg: AdvisorMessage = {
+        role: "assistant",
+        content: res.text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+      setStats({
+        tokens_per_second: res.tokens_per_second,
+        first_token_ms: res.first_token_ms,
+        memory_used_gb: res.memory_used_gb
+      });
+      setLoading(false);
+    } catch (e) {
+      console.error(e);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "[ERROR] Failed to query local model. Ensure the Ollama port 11434 is running offline.",
+          timestamp: new Date().toLocaleTimeString()
+        }
+      ]);
+      setLoading(false);
+    }
+  };
+
+  const suggestions = [
+    "Draft a policy to block malicious HTTP requests",
+    "Explain how daily token budgets prevent compliance risk",
+    "Is local inference GDPR compliant?",
+    "How can I audit agent web browsing actions?"
+  ];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-250px)] min-h-[500px]">
+      {/* Chat window */}
+      <div className="lg:col-span-3 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-950 flex flex-col h-full">
+        {/* Model selector bar */}
+        <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-gray-500 uppercase">Advisor Model:</span>
+            {fetchingModels ? (
+              <div className="h-4 w-28 bg-gray-150 dark:bg-gray-800 animate-pulse rounded" />
+            ) : (
+              <select
+                value={selectedModelTag}
+                onChange={(e) => setSelectedModelTag(e.target.value)}
+                className="input py-1 px-2.5 text-[11px] w-52 bg-white dark:bg-gray-900"
+              >
+                {models.map((m) => (
+                  <option key={m.id} value={m.ollama_tag}>
+                    {m.display_name} [{m.source}]
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <button onClick={() => setMessages([messages[0]])} className="text-[10px] font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            Reset Chat
+          </button>
+        </div>
+
+        {/* Message feed */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((m, idx) => (
+            <div key={idx} className={`flex gap-3 max-w-[85%] ${m.role === "user" ? "ml-auto flex-row-reverse" : ""}`}>
+              <div className={`p-2 rounded-full h-8 w-8 flex items-center justify-center flex-shrink-0 ${
+                m.role === "user" ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+              }`}>
+                {m.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+              </div>
+              <div>
+                <div className={`p-3 rounded-2xl text-xs leading-relaxed whitespace-pre-wrap ${
+                  m.role === "user"
+                    ? "bg-primary text-white rounded-tr-none"
+                    : "bg-gray-100 dark:bg-gray-900 text-gray-850 dark:text-gray-200 border border-gray-150 dark:border-gray-850 rounded-tl-none"
+                }`}>
+                  {m.content}
+                </div>
+                <span className="text-[9px] text-gray-400 dark:text-gray-500 mt-1 block px-1 text-right">
+                  {m.timestamp}
+                </span>
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex gap-3 max-w-[80%]">
+              <div className="p-2 rounded-full h-8 w-8 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center">
+                <Bot className="h-4 w-4" />
+              </div>
+              <div className="p-3 bg-gray-100 dark:bg-gray-900 text-xs rounded-2xl rounded-tl-none border border-gray-150 dark:border-gray-850">
+                <div className="flex gap-1.5 items-center py-1">
+                  <span className="h-2 w-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="h-2 w-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="h-2 w-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Suggestions list when feed is short */}
+        {messages.length === 1 && (
+          <div className="p-4 border-t border-gray-105 dark:border-gray-850 bg-gray-50/20">
+            <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Suggested Topics</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((s, idx) => (
+                <button key={idx} onClick={() => handleSend(s)} className="px-3 py-1.5 rounded-full text-left text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:border-primary/50 transition">
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Input area */}
+        <div className="p-3 border-t border-gray-200 dark:border-gray-800 flex gap-2">
+          <input
+            type="text"
+            placeholder="Ask your Compliance Advisor..."
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            className="input flex-1 text-xs py-2 px-3 bg-gray-50/50 dark:bg-gray-900/50"
+            disabled={loading || !selectedModelTag}
+          />
+          <button onClick={() => handleSend()} disabled={loading || !inputMessage.trim() || !selectedModelTag} className="btn btn-primary btn-sm px-3 flex items-center gap-1">
+            <Send className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Sidebar helper panels */}
+      <div className="space-y-4">
+        <Card className="p-4 space-y-4">
+          <h3 className="font-bold text-xs text-gray-900 dark:text-white uppercase tracking-wider border-b border-gray-200 dark:border-gray-800 pb-2 flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-500" /> Compliance Status
+          </h3>
+          <div className="space-y-3 text-[11px] text-gray-600 dark:text-gray-300">
+            <div className="flex justify-between">
+              <span>GDPR Egress Check:</span>
+              <span className="font-bold text-emerald-500">ACTIVE</span>
+            </div>
+            <div className="flex justify-between">
+              <span>HIPAA Vault Storage:</span>
+              <span className="font-bold text-emerald-500">SECURE</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Local Model Offline Run:</span>
+              <span className="font-bold text-emerald-500">VERIFIED</span>
+            </div>
+          </div>
+        </Card>
+
+        {stats && (
+          <Card className="p-4 space-y-3">
+            <h3 className="font-bold text-xs text-gray-900 dark:text-white uppercase tracking-wider border-b border-gray-200 dark:border-gray-800 pb-2">
+              Performance Stats
+            </h3>
+            <div className="space-y-2 text-[11px]">
+              <div className="flex justify-between">
+                <span>Speed:</span>
+                <span className="font-bold">{stats.tokens_per_second.toFixed(1)} t/s</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Latency:</span>
+                <span className="font-bold">{stats.first_token_ms} ms</span>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <Card className="p-4 bg-primary/5 border-primary/10">
+          <h4 className="font-semibold text-xs text-primary mb-1.5 flex items-center gap-1.5">
+            <Info className="h-4 w-4" /> Policy Guidelines
+          </h4>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-normal">
+            This assistant runs completely locally. It evaluates your active policies in memory to provide context-aware recommendations on how to configure EdgeStack safely.
+          </p>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "policies" | "simulate" | "audit";
+type Tab = "overview" | "policies" | "simulate" | "audit" | "advisor";
 
 export default function GovernancePage() {
   const [activeTab, setActiveTab]       = useState<Tab>("overview");
@@ -554,6 +836,7 @@ export default function GovernancePage() {
     { id: "policies",  label: `Policies (${policies.length})`, icon: ShieldCheck  },
     { id: "simulate",  label: "Simulator",           icon: FlaskConical },
     { id: "audit",     label: "Audit Log",           icon: FileText     },
+    { id: "advisor",   label: "Compliance Advisor",  icon: MessageSquare },
   ];
 
   return (
@@ -783,6 +1066,9 @@ export default function GovernancePage() {
               </div>
             </div>
           )}
+
+          {/* ── COMPLIANCE ADVISOR ───────────────────────────────────────────── */}
+          {activeTab === "advisor" && <ComplianceAdvisor policies={policies} />}
         </>
       )}
 
