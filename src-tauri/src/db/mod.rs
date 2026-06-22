@@ -28,7 +28,7 @@ pub fn init_pool() -> Result<DbPool> {
 }
 
 fn get_db_path() -> PathBuf {
-    crate::utils::fs::app_dir().join("edgestack.db")
+    crate::utils::fs::app_dir().join("preceptaai.db")
 }
 
 const SCHEMA_SQL: &str = r#"
