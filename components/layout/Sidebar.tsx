@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard,
   GitBranch,
@@ -27,6 +28,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ notificationCount = 0 }) => {
   const pathname = usePathname();
+  const { user, logout, isTauri } = useAuth();
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -65,12 +67,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ notificationCount = 0 }) => {
           );
         })}
       </nav>
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <div className="h-2 w-2 rounded-full bg-green-500" />
-          <span>Local Core Live</span>
+      {user && (
+        <div className="px-4 py-3.5 border-t border-gray-200 dark:border-gray-800 flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <img
+              src={user.picture || "/favicon.svg"}
+              alt={user.name}
+              className="h-8 w-8 rounded-full border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-900"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-xs text-gray-900 dark:text-white truncate">{user.name}</div>
+              <div className="text-[10px] text-gray-500 dark:text-gray-500 truncate">{user.email}</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+              <div className={`h-1.5 w-1.5 rounded-full ${isTauri ? "bg-amber-500" : "bg-green-500"}`} />
+              <span>{isTauri ? "Tauri Dev Mode" : "Local Core Live"}</span>
+            </div>
+            {!isTauri && (
+              <button
+                onClick={logout}
+                className="text-[10px] font-semibold text-red-500 hover:text-red-600 transition"
+              >
+                Log out
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 };
+

@@ -43,3 +43,9 @@ next-env.d.ts
 
 # Tauri build outputs
 /src-tauri/target/
+
+# Local database files
+*.db
+*.db-shm
+*.db-wal
+
