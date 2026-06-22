@@ -16,7 +16,9 @@ import {
   GitCompare,
   Cpu,
   Server,
-  ShieldCheck
+  ShieldCheck,
+  Globe,
+  Shield
 } from "lucide-react";
 
 interface SidebarProps {
@@ -31,6 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ notificationCount = 0 }) => {
     { name: "Compute", href: "/compute", icon: Server },
     { name: "Storage", href: "/storage", icon: Database },
     { name: "Workflows", href: "/workflows", icon: GitBranch },
+    { name: "Browser Sandbox", href: "/browser-runtime", icon: Globe },
     { name: "AI Chat Playground", href: "/playground", icon: MessageSquare },
     { name: "Model Arena", href: "/compare", icon: GitCompare },
     { name: "Models Hub", href: "/models", icon: Cpu },
@@ -44,8 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ notificationCount = 0 }) => {
   return (
     <aside className="sidebar">
       <div className="flex items-center gap-2 px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-        <Workflow className="h-6 w-6 text-primary" />
-        <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">EdgeStack</span>
+        <Shield className="h-6 w-6 text-[#1E3A8A] dark:text-[#38bdf8]" />
+        <span className="font-bold text-lg tracking-tight text-[#1E3A8A] dark:text-white">PreceptaAI</span>
       </div>
       <nav className="flex-1 py-4 space-y-1">
         {navItems.map((item) => {

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 
+import { Layout } from "@/components/layout/Layout";
+
 export default function WebGPULaunchpad() {
   const [model, setModel] = useState("onnx-community/Llama-3.2-1B-Instruct");
   const [prompt, setPrompt] = useState("");
@@ -88,11 +90,8 @@ export default function WebGPULaunchpad() {
   };
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>PreceptaAI WebGPU Launchpad</h1>
-        <p style={styles.subtitle}>Execute client-side ONNX and Transformers.js model pipelines inside isolated browser sandboxes.</p>
-      </header>
+    <Layout title="Browser WebGPU Sandbox">
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px", padding: "20px" }}>
 
       {quotaWarning && (
         <div style={styles.quotaWarningBanner}>
@@ -206,7 +205,8 @@ export default function WebGPULaunchpad() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </Layout>
   );
 }
 

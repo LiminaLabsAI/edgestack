@@ -1,16 +1,16 @@
 [package]
-name = "edgestack"
+name = "preceptaai"
 version = "1.0.0"
 description = "Your private AI business automation hub"
-authors = ["EdgeStack"]
+authors = ["PreceptaAI"]
 edition = "2021"
 
 [lib]
-name = "edgestack_lib"
+name = "preceptaai_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "edgestack"
+name = "preceptaai"
 path = "src/main.rs"
 
 [build-dependencies]
