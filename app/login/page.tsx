@@ -138,7 +138,7 @@ export default function LoginPage() {
           {/* Logo & Header */}
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center p-2 mb-2">
-              <img src="/logo.png" alt="PreceptaAI Logo" className="h-18 object-contain" />
+              <img src="/logo.png" alt="PreceptaAI Logo" className="h-18 object-contain dark:brightness-0 dark:invert" />
             </div>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold tracking-widest uppercase">
               YOUR PRIVATE AI BUSINESS HUB

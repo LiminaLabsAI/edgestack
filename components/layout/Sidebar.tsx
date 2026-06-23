@@ -49,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ notificationCount = 0 }) => {
   return (
     <aside className="sidebar">
       <div className="flex items-center px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-        <img src="/logo.png" alt="PreceptaAI" className="h-8 object-contain" />
+        <img src="/logo.png" alt="PreceptaAI" className="h-8 object-contain dark:brightness-0 dark:invert" />
       </div>
       <nav className="flex-1 py-4 space-y-1">
         {navItems.map((item) => {
