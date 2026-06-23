@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser({
         name: "Developer Mode",
         email: "dev@preceptaai.com",
-        picture: "/favicon.svg",
+        picture: "/logo.png",
       });
       setLoading(false);
     } else {

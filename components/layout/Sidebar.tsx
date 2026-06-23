@@ -48,9 +48,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ notificationCount = 0 }) => {
 
   return (
     <aside className="sidebar">
-      <div className="flex items-center gap-2 px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-        <Shield className="h-6 w-6 text-[#1E3A8A] dark:text-[#38bdf8]" />
-        <span className="font-bold text-lg tracking-tight text-[#1E3A8A] dark:text-white">PreceptaAI</span>
+      <div className="flex items-center px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+        <img src="/logo.png" alt="PreceptaAI" className="h-8 object-contain" />
       </div>
       <nav className="flex-1 py-4 space-y-1">
         {navItems.map((item) => {
@@ -71,7 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ notificationCount = 0 }) => {
         <div className="px-4 py-3.5 border-t border-gray-200 dark:border-gray-800 flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <img
-              src={user.picture || "/favicon.svg"}
+              src={user.picture || "/logo.png"}
               alt={user.name}
               className="h-8 w-8 rounded-full border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-900"
             />

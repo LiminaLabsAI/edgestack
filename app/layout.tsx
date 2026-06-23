@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "PreceptaAI — Your Private AI Business Hub",
   description: "Local-first AI agent platform for solopreneur founders",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/logo.png",
   },
 };
 

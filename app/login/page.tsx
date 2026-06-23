@@ -114,7 +114,7 @@ export default function LoginPage() {
     login({
       name: "Guest Explorer",
       email: "guest@preceptaai.com",
-      picture: "/favicon.svg",
+      picture: "/logo.png",
     });
   };
 
@@ -135,14 +135,11 @@ export default function LoginPage() {
 
         <div className="z-10 w-full max-w-md px-6">
           {/* Logo & Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center p-3 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 border border-indigo-500/10 dark:border-indigo-500/20 rounded-2xl shadow-sm mb-4">
-              <img src="/favicon.svg" alt="PreceptaAI Logo" className="h-12 w-12" />
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center p-2 mb-2">
+              <img src="/logo.png" alt="PreceptaAI Logo" className="h-18 object-contain" />
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-700 to-indigo-900 dark:from-white dark:via-gray-200 dark:to-indigo-200">
-              PreceptaAI
-            </h1>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 font-bold tracking-widest uppercase">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold tracking-widest uppercase">
               YOUR PRIVATE AI BUSINESS HUB
             </p>
           </div>
