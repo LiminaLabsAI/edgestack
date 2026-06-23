@@ -31,7 +31,7 @@ export default function LoginPage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Default fallback client ID for local demonstration
-  const defaultClientId = "1029384756-fakeclientid.apps.googleusercontent.com";
+  const defaultClientId = "492495778264-k6nr9redice5lt6l823g15i3e2tfotsf.apps.googleusercontent.com";
 
   // Watch document theme mode
   useEffect(() => {
@@ -51,12 +51,16 @@ export default function LoginPage() {
   useEffect(() => {
     // Check if user has saved a custom Google Client ID
     const savedId = localStorage.getItem("preceptaai_google_client_id");
-    if (savedId) {
+    // If the saved ID is the old mock placeholder, clean it up
+    if (savedId === "1029384756-fakeclientid.apps.googleusercontent.com") {
+      localStorage.removeItem("preceptaai_google_client_id");
+      setClientId(defaultClientId);
+    } else if (savedId) {
       setClientId(savedId);
     } else {
       setClientId(defaultClientId);
     }
-  }, []);
+  }, [defaultClientId]);
 
   const initializeGoogleSignIn = () => {
     const activeId = clientId || defaultClientId;
