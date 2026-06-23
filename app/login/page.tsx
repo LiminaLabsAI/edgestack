@@ -107,7 +107,8 @@ export default function LoginPage() {
     localStorage.setItem("preceptaai_google_client_id", clientId);
     setShowConfig(false);
     setErrorMsg("");
-    setTimeout(initializeGoogleSignIn, 100);
+    // Force a full page reload so Google Identity Services SDK initializes fresh with the new Client ID
+    window.location.reload();
   };
 
   const handleSimulateLogin = () => {
