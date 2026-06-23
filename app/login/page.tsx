@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import Script from "next/script";
-import { Sparkles, Shield, Cpu, Info, AlertTriangle, CheckCircle } from "lucide-react";
+import { Sparkles, Shield, Cpu } from "lucide-react";
 
 // Helper to decode JWT from Google Sign-In
 function decodeJwt(token: string) {
@@ -25,8 +25,6 @@ function decodeJwt(token: string) {
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [clientId, setClientId] = useState("");
-  const [showConfig, setShowConfig] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -48,26 +46,11 @@ export default function LoginPage() {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    // Check if user has saved a custom Google Client ID
-    const savedId = localStorage.getItem("preceptaai_google_client_id");
-    // If the saved ID is the old mock placeholder, clean it up
-    if (savedId === "1029384756-fakeclientid.apps.googleusercontent.com") {
-      localStorage.removeItem("preceptaai_google_client_id");
-      setClientId(defaultClientId);
-    } else if (savedId) {
-      setClientId(savedId);
-    } else {
-      setClientId(defaultClientId);
-    }
-  }, [defaultClientId]);
-
   const initializeGoogleSignIn = () => {
-    const activeId = clientId || defaultClientId;
     if (typeof window !== "undefined" && (window as any).google) {
       try {
         (window as any).google.accounts.id.initialize({
-          client_id: activeId,
+          client_id: defaultClientId,
           callback: (response: any) => {
             const credential = response.credential;
             const decoded = decodeJwt(credential);
@@ -75,7 +58,7 @@ export default function LoginPage() {
               login({
                 name: decoded.name || decoded.email.split("@")[0],
                 email: decoded.email,
-                picture: decoded.picture || "/favicon.svg",
+                picture: decoded.picture || "/logo.png",
               });
             } else {
               setErrorMsg("Invalid token received from Google authentication.");
@@ -102,18 +85,9 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    // Initialize whenever clientId or theme mode changes
+    // Initialize whenever theme mode changes
     initializeGoogleSignIn();
-  }, [clientId, isDarkMode]);
-
-  const saveClientId = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem("preceptaai_google_client_id", clientId);
-    setShowConfig(false);
-    setErrorMsg("");
-    // Force a full page reload so Google Identity Services SDK initializes fresh with the new Client ID
-    window.location.reload();
-  };
+  }, [isDarkMode]);
 
   const handleSimulateLogin = () => {
     login({
@@ -122,8 +96,6 @@ export default function LoginPage() {
       picture: "/logo.png",
     });
   };
-
-  const isDefaultClientId = clientId === defaultClientId;
 
   return (
     <>
@@ -174,20 +146,6 @@ export default function LoginPage() {
                 </span>
               </div>
 
-              {/* Configuration Notice Helper */}
-              {isDefaultClientId && (
-                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 p-3.5 rounded-2xl text-xs space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-semibold">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    Google Credentials Required
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-gray-600 dark:text-amber-200/80">
-                    To use Google Sign-In, please configure a client ID registered to your domain (<code className="font-mono bg-amber-100/60 dark:bg-amber-950/50 px-1 py-0.5 rounded text-[10px]">https://console.preceptaai.com</code>). 
-                    Otherwise, click the demo mode option below.
-                  </p>
-                </div>
-              )}
-
               {/* Divider */}
               <div className="flex items-center gap-3">
                 <div className="h-[1px] bg-gray-200 dark:bg-gray-800 flex-1" />
@@ -210,54 +168,14 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Custom Client ID Toggle Button */}
+            {/* Footer Version Info */}
             <div className="mt-8 border-t border-gray-150 dark:border-gray-800 pt-4 flex justify-between items-center text-[10px] text-gray-400 dark:text-gray-500">
-              <button
-                onClick={() => setShowConfig(!showConfig)}
-                className="hover:text-indigo-600 dark:hover:text-indigo-400 font-bold transition flex items-center gap-1"
-              >
-                <Info className="h-3.5 w-3.5" />
-                Configure Google Client ID
-              </button>
+              <span className="font-bold flex items-center gap-1">
+                <Shield className="h-3.5 w-3.5" />
+                PreceptaAI Console
+              </span>
               <span>v1.0.0</span>
             </div>
-
-            {/* Custom Client ID Configuration Panel */}
-            {showConfig && (
-              <form onSubmit={saveClientId} className="mt-4 p-4 bg-gray-50 dark:bg-black/60 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-3 text-xs">
-                <div>
-                  <label className="block text-gray-500 dark:text-gray-400 font-bold mb-1 text-[10px]">Google Client ID</label>
-                  <input
-                    type="text"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    placeholder="Enter Client ID from Google Cloud Console"
-                    className="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg px-3 py-2 text-gray-900 dark:text-white font-mono text-[10px] focus:outline-none focus:border-indigo-500"
-                    required
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setClientId(defaultClientId);
-                      localStorage.removeItem("preceptaai_google_client_id");
-                      setShowConfig(false);
-                      setTimeout(initializeGoogleSignIn, 100);
-                    }}
-                    className="flex-1 py-1.5 rounded-md bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850 border border-gray-250 dark:border-gray-800 text-[10px] text-gray-500 dark:text-gray-400 font-bold transition"
-                  >
-                    Reset Default
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-[10px] text-white font-bold transition"
-                  >
-                    Apply Client ID
-                  </button>
-                </div>
-              </form>
-            )}
           </div>
 
           {/* Footer Features */}
