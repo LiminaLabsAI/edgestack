@@ -467,22 +467,29 @@ export const invoke = async (cmd: string, args?: any): Promise<any> => {
 
     case "scan_hardware": {
       await new Promise((resolve) => setTimeout(resolve, 1500)); // scan takes longer
+      const isMac = typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
+      const cores = typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 12 : 12;
+      const brand = isMac ? "Apple M-Series Silicon Core" : "Intel(R) Core(TM) i9 Processor";
+      const gpu = isMac ? "Apple Neural Engine" : "NVIDIA GeForce RTX 4080 GPU";
+      const tier = cores >= 10 ? "Excellent / High Performance" : "Good Performance";
+      const cpuTier = cores >= 10 ? "excellent" : "good";
+      
       return {
-        cpu_cores: 12,
-        cpu_brand: "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
-        ram_total_gb: 16.0,
-        ram_available_gb: 6.0,
-        gpu_vendor: "AMD Radeon Pro 5300M",
-        gpu_vram_gb: 4.0,
-        disk_free_gb: 388.0,
-        tier: "Good Performance",
-        cpu_label: "12 Cores (Intel i7-9750H)",
-        cpu_tier: "good",
-        ram_label: "16 GB (6.0 GB Available)",
-        ram_tier: "capable",
-        gpu_label: "AMD Radeon Pro 5300M (4 GB)",
-        gpu_tier: "good",
-        disk_label: "388.0 GB Free",
+        cpu_cores: cores,
+        cpu_brand: brand,
+        ram_total_gb: 32.0,
+        ram_available_gb: 18.0,
+        gpu_vendor: gpu,
+        gpu_vram_gb: 16.0,
+        disk_free_gb: 512.0,
+        tier: tier,
+        cpu_label: `${cores} Cores (${isMac ? "M-Series" : "Intel/AMD"})`,
+        cpu_tier: cpuTier,
+        ram_label: "32 GB (18.0 GB Available)",
+        ram_tier: "excellent",
+        gpu_label: `${gpu} (16 GB)`,
+        gpu_tier: "excellent",
+        disk_label: "512.0 GB Free",
         disk_tier: "ssd"
       };
     }
@@ -1269,11 +1276,16 @@ You can review this pipeline and click **"Apply YAML to Editor"** above to load 
       }
 
       // Standard chat responses
+      const isMac = typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
+      const cores = typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 12 : 12;
+      const brand = isMac ? "Apple Silicon" : "Intel i9 / AMD Ryzen";
+      const threads = Math.max(2, Math.floor(cores * 0.75));
+
       const answers = [
-        "That is an excellent point. Running this workflow on your Intel i7-9750H core ensures that no data leaves your physical SSD. To optimize latency further, we can allocate 6 threads.",
+        `That is an excellent point. Running this workflow on your ${brand} core ensures that no data leaves your physical SSD. To optimize latency further, we can allocate ${threads} threads.`,
         "To query your SQLite database from a local prompt step, you can structure your prompt template like this: `Querying user analytics for {{steps.fetch_records.output}}`. This runs fully offline.",
         "Local models can be fine-tuned or loaded using GGUF quantization. For example, Qwen 2.5 1.5B is exceptional at structured outputs (such as JSON regex extractions), while Llama 3.1 8B excels at writing detailed paragraphs.",
-        "EdgeStack intercepts AWS Bedrock calls. If you configure your local app to point to port 4566, the Bedrock bridge redirects queries here, saving you AWS API bills."
+        "PreceptaAI intercepts AWS Bedrock calls. If you configure your local app to point to port 4566, the Bedrock bridge redirects queries here, saving you AWS API bills."
       ];
       
       const randomAnswer = answers[Math.floor(Math.random() * answers.length)];
