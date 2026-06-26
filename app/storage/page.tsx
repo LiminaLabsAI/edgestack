@@ -39,7 +39,7 @@ interface VaultObject {
   workflow_name: string | null;
 }
 
-export default function StoragePage() {
+export default function StoragePage({ embed = false }: { embed?: boolean }) {
   const [buckets, setBuckets] = useState<VaultSummary[]>([]);
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
   const [objects, setObjects] = useState<VaultObject[]>([]);
@@ -228,8 +228,8 @@ export default function StoragePage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  return (
-    <Layout title="S3 Storage Core">
+  const content = (
+    <>
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-base font-bold text-gray-900 dark:text-white">Local S3 Storage buckets</h2>
@@ -457,6 +457,14 @@ export default function StoragePage() {
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (embed) return content;
+
+  return (
+    <Layout title="S3 Storage Core">
+      {content}
     </Layout>
   );
 }

@@ -29,7 +29,7 @@ export default function LoginPage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Default fallback client ID for local demonstration
-  const defaultClientId = "492495778264-k6nr9redice5lt6l823g15i3e2tfotsf.apps.googleusercontent.com";
+  const defaultClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "492495778264-k6nr9redice5lt6l823g15i3e2tfotsf.apps.googleusercontent.com";
 
   // Watch document theme mode
   useEffect(() => {

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { Layout } from "../components/layout/Layout";
+import ComputePage from "./compute/page";
+import StoragePage from "./storage/page";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
@@ -108,9 +110,25 @@ interface AgentMetrics {
 }
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<"infrastructure" | "automation">("infrastructure");
+  const [activeTab, setActiveTab] = useState<"infrastructure" | "automation" | "compute" | "storage">("infrastructure");
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+
+  const searchStr = typeof window !== "undefined" ? window.location.search : "";
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchStr);
+    const tabParam = params.get("tab");
+    if (tabParam === "compute") {
+      setActiveTab("compute");
+    } else if (tabParam === "storage") {
+      setActiveTab("storage");
+    } else if (tabParam === "automation") {
+      setActiveTab("automation");
+    } else {
+      setActiveTab("infrastructure");
+    }
+  }, [searchStr]);
 
   // Automation states
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -233,7 +251,7 @@ export default function Dashboard() {
   const totalRunsCount = workflows.reduce((acc, w) => acc + w.run_count, 0);
 
   return (
-    <Layout title="Dashboard">
+    <Layout title="Control Tower">
       {/* HITL Intervention Alert Banner */}
       <AlertBanner pausedRuns={pausedRuns} onReview={handleReviewTrigger} />
 
@@ -260,6 +278,26 @@ export default function Dashboard() {
           >
             <GitBranch className="h-3.5 w-3.5" /> Agent Automations
           </button>
+          <button
+            onClick={() => setActiveTab("compute")}
+            className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition flex items-center gap-1.5 ${
+              activeTab === "compute"
+                ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+            }`}
+          >
+            <Cpu className="h-3.5 w-3.5" /> Compute
+          </button>
+          <button
+            onClick={() => setActiveTab("storage")}
+            className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition flex items-center gap-1.5 ${
+              activeTab === "storage"
+                ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+            }`}
+          >
+            <Database className="h-3.5 w-3.5" /> Storage
+          </button>
         </div>
         <div className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1.5">
           <div className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
@@ -267,7 +305,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {activeTab === "infrastructure" ? (
+      {activeTab === "infrastructure" && (
         /* INFRASTRUCTURE DASHBOARD VIEW */
         <div className="space-y-6">
           {/* Infrastructure Metrics Row */}
@@ -461,7 +499,9 @@ export default function Dashboard() {
             </div>
           </Card>
         </div>
-      ) : (
+      )}
+
+      {activeTab === "automation" && (
         /* AUTOMATION DASHBOARD VIEW — Agent Workspace */
         <div className="space-y-6">
           {/* Summary Metrics Row */}
@@ -697,6 +737,14 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === "compute" && (
+        <ComputePage embed />
+      )}
+
+      {activeTab === "storage" && (
+        <StoragePage embed />
       )}
 
       {/* Failure review intervention modal */}

@@ -67,7 +67,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
     <div>
       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 text-center">Select AI Inference Model</h3>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-6 text-center">
-        EdgeStack runs this model completely offline. A larger model is more capable but requires more memory.
+        PreceptaAI runs this model completely offline. A larger model is more capable but requires more memory.
       </p>
 
       <div className="space-y-3 mb-6 max-h-[360px] overflow-y-auto pr-1">

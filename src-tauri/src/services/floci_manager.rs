@@ -5,16 +5,19 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 pub async fn start_floci() -> Result<()> {
-    // Check if port 4568 is already in use (e.g. from an existing mock or another process)
-    if check_port_in_use(4568) {
-        println!("Port 4568 is already in use, assuming Floci/Mock is running");
-        return Ok(());
-    }
-
-    // Spawn native mock server on port 4568
+    // Spawn supervisor thread for native mock server on port 4568
     tokio::spawn(async {
-        if let Err(e) = run_mock_server().await {
-            println!("Error running native Floci S3/SQS mock server: {}", e);
+        loop {
+            if !check_port_in_use(4568) {
+                println!("Supervisor: Floci S3/SQS Mock Server is offline. Starting/restarting...");
+                tokio::spawn(async {
+                    if let Err(e) = run_mock_server().await {
+                        println!("Error running native Floci S3/SQS mock server: {}", e);
+                    }
+                });
+                tokio::time::sleep(Duration::from_secs(2)).await;
+            }
+            tokio::time::sleep(Duration::from_secs(10)).await;
         }
     });
 

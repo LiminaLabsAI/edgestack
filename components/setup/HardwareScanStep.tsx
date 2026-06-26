@@ -109,7 +109,7 @@ export const HardwareScanStep: React.FC<HardwareScanStepProps> = ({ onNext }) =>
     <div>
       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 text-center">Hardware Scan Complete</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">
-        EdgeStack auto-configured for your device tier:{" "}
+        PreceptaAI auto-configured for your device tier:{" "}
         <span className="font-semibold text-primary">{profile.tier}</span>.
       </p>
 

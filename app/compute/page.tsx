@@ -56,7 +56,7 @@ interface Telemetry {
   active_containers: number;
 }
 
-export default function ComputePage() {
+export default function ComputePage({ embed = false }: { embed?: boolean }) {
   const [instances, setInstances] = useState<ComputeInstance[]>([]);
   const [containers, setContainers] = useState<ComputeContainer[]>([]);
   const [telemetry, setTelemetry] = useState<Telemetry>({
@@ -81,7 +81,7 @@ export default function ComputePage() {
   // Terminal Simulator State
   const [activeTerminalContainer, setActiveTerminalContainer] = useState<ComputeContainer | null>(null);
   const [terminalHistory, setTerminalHistory] = useState<{ type: "input" | "output"; text: string }[]>([
-    { type: "output", text: "EdgeStack Container Shell Emulator v2.0" },
+    { type: "output", text: "PreceptaAI Container Shell Emulator v2.0" },
     { type: "output", text: "Type 'help' to view available diagnostic tools.\n" }
   ]);
   const [terminalInput, setTerminalInput] = useState("");
@@ -234,8 +234,8 @@ export default function ComputePage() {
     return `${s}s`;
   };
 
-  return (
-    <Layout title="Local Compute Core">
+  const content = (
+    <>
       {/* Telemetry Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
         <Card className="p-5 hover:shadow-md transition">
@@ -532,7 +532,7 @@ export default function ComputePage() {
                 <div key={idx} className="whitespace-pre-wrap leading-relaxed">
                   {item.type === "input" ? (
                     <span className="text-gray-400 flex items-start gap-1">
-                      <span className="text-emerald-600 font-bold">root@edgestack:/#</span> {item.text}
+                      <span className="text-emerald-600 font-bold">root@preceptaai:/#</span> {item.text}
                     </span>
                   ) : (
                     <span>{item.text}</span>
@@ -544,7 +544,7 @@ export default function ComputePage() {
 
             {/* Input Line */}
             <form onSubmit={handleSendTerminalCommand} className="flex bg-black px-4 py-3 items-center border-t border-gray-900 gap-2">
-              <span className="text-emerald-600 font-bold flex-shrink-0">root@edgestack:/#</span>
+              <span className="text-emerald-600 font-bold flex-shrink-0">root@preceptaai:/#</span>
               <input
                 type="text"
                 value={terminalInput}
@@ -560,6 +560,14 @@ export default function ComputePage() {
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (embed) return content;
+
+  return (
+    <Layout title="Local Compute Core">
+      {content}
     </Layout>
   );
 }

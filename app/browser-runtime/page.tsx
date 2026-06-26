@@ -111,7 +111,7 @@ export default function WebGPULaunchpad() {
                 onChange={(e) => setModel(e.target.value)}
               >
                 <option value="onnx-community/Llama-3.2-1B-Instruct">Llama 3.2 1B Instruct (ONNX Quantized)</option>
-                <option value="Xenova/Qwen1.5-0.5B-Chat">Qwen 1.5 0.5B Chat (Lightweight)</option>
+                <option value="Xenova/Qwen1.5-0.5B-Chat">Qwen 1.5 0.5B (Lightweight)</option>
                 <option value="onnx-community/Phi-3-mini-4k-instruct">Phi-3 Mini 4K Instruct</option>
               </select>
             </div>

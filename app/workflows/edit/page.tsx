@@ -41,7 +41,7 @@ function EditWorkflowContent() {
   const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([
     {
       role: "assistant",
-      content: "Hi! I am your EdgeStack Copilot. Describe your business automation target, and I will generate the local agent YAML layout for you!"
+      content: "Hi! I am your PreceptaAI Copilot. Describe your business automation target, and I will generate the local agent YAML layout for you!"
     }
   ]);
 
@@ -412,7 +412,7 @@ function EditWorkflowContent() {
               /* Copilot Chat */
               <div className="border border-gray-250 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-950 flex flex-col h-full max-h-[calc(100vh-230px)]">
                 <div className="p-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 text-[10px] font-bold text-gray-500 flex items-center gap-1">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" /> EdgeStack Local Copilot
+                  <Sparkles className="h-3.5 w-3.5 text-primary" /> PreceptaAI Local Copilot
                 </div>
                 
                 {/* Message logs */}

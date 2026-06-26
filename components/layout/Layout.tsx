@@ -6,6 +6,7 @@ import { invoke } from "@/lib/tauri";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { Spinner } from "../ui/Spinner";
+import { ErrorBoundary } from "../ui/ErrorBoundary";
 
 interface LayoutProps {
   title?: string;
@@ -53,7 +54,11 @@ export const Layout: React.FC<LayoutProps> = ({ title, children }) => {
       <Sidebar />
       <div className="main-area">
         <TopBar title={title} />
-        <main className="page-content">{children}</main>
+        <main className="page-content">
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+        </main>
       </div>
     </div>
   );

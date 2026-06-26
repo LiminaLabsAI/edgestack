@@ -58,7 +58,7 @@ export const SetupSummaryStep: React.FC<SetupSummaryStepProps> = ({
       try {
         setLoading(true);
         const prompt = `
-          You are a precise setup assistant for EdgeStack.
+          You are a precise setup assistant for PreceptaAI.
           Summarize this local AI node configuration in 3 short, encouraging sentences for a business founder.
           
           Hardware Tier: ${hardwareProfile.tier} (${hardwareProfile.cpu_cores} Cores, ${hardwareProfile.ram_total_gb.toFixed(0)} GB RAM).
@@ -81,7 +81,7 @@ export const SetupSummaryStep: React.FC<SetupSummaryStepProps> = ({
         console.error("AI Summary generation failed:", e);
         // Fallback summary
         setAiSummary(
-          `Your setup is complete! EdgeStack is configured to run ${selectedModel.display_name} locally on your ${hardwareProfile.tier}-tier machine. ` +
+          `Your setup is complete! PreceptaAI is configured to run ${selectedModel.display_name} locally on your ${hardwareProfile.tier}-tier machine. ` +
           `Using ${resourceConfig.cpuCores} CPU cores and ${resourceConfig.memoryGb} GB RAM, you will experience fast, private inference of ~${benchmarkResult.responses_per_minute} responses/minute ` +
           `at your electricity rate of $${resourceConfig.electricityRate.toFixed(2)}/kWh, with zero recurring cloud API subscription bills.`
         );
@@ -171,7 +171,7 @@ export const SetupSummaryStep: React.FC<SetupSummaryStepProps> = ({
           Back
         </Button>
         <Button onClick={handleFinish} loading={saving} className="flex-1 justify-center btn-primary">
-          Open EdgeStack
+          Open Console
         </Button>
       </div>
     </div>

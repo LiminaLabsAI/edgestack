@@ -76,7 +76,7 @@ export const ResourceAllocationStep: React.FC<ResourceAllocationStepProps> = ({
     <div>
       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 text-center">Allocate Local Resources</h3>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-6 text-center">
-        Control how much CPU, memory, and storage EdgeStack is allowed to use on your machine.
+        Control how much CPU, memory, and storage PreceptaAI is allowed to use on your machine.
       </p>
 
       {/* Model Footprint Banner */}

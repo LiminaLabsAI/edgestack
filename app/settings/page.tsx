@@ -177,7 +177,7 @@ export default function SettingsPage() {
               <Key className="h-4 w-4 text-primary" /> Object Vault Keychain (Local Credential Manager)
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-normal">
-              Store API keys for HTTP step credentials. EdgeStack saves credentials inside your computer's OS secure keychain (Apple Keychain / Credential Vault) and never writes them to raw database fields.
+              Store API keys for HTTP step credentials. PreceptaAI saves credentials inside your computer's OS secure keychain (Apple Keychain / Credential Vault) and never writes them to raw database fields.
             </p>
 
             {secretError && <p className="text-xs text-red-500 mb-3">{secretError}</p>}
@@ -237,7 +237,7 @@ export default function SettingsPage() {
           <Card className="p-4 bg-gray-50 dark:bg-gray-900">
             <h4 className="font-semibold text-xs text-gray-900 dark:text-white mb-1.5">Keychain Security Note</h4>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-normal mb-3">
-              EdgeStack references API keys under label values during workflow execution. Your passwords remain encrypted by your operating system, maintaining HIPAA, SOC-2, and business compliance.
+              PreceptaAI references API keys under label values during workflow execution. Your passwords remain encrypted by your operating system, maintaining HIPAA, SOC-2, and business compliance.
             </p>
             <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
               <HelpCircle className="h-4 w-4" /> Locked by System Keychain

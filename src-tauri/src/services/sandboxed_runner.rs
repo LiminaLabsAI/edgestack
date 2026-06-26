@@ -10,6 +10,19 @@ pub struct SandboxedModelSession {
     _model_id: String,
 }
 
+fn is_safe_binary_path(path: &str) -> bool {
+    let path_trimmed = path.trim();
+    if path_trimmed.is_empty() {
+        return false;
+    }
+    for c in path_trimmed.chars() {
+        if !c.is_alphanumeric() && c != '/' && c != '-' && c != '_' && c != '.' {
+            return false;
+        }
+    }
+    true
+}
+
 impl SandboxedModelSession {
     pub fn spawn_session(
         app: tauri::AppHandle,
@@ -17,6 +30,10 @@ impl SandboxedModelSession {
         model_id: &str,
         binary_path: &str,
     ) -> Result<Self> {
+        if !is_safe_binary_path(binary_path) {
+            return Err(anyhow!("Security Exception: Unauthorized or unsafe binary path '{}'", binary_path));
+        }
+
         println!("[SandboxRunner] Spawning sandboxed model sidecar process for model: {}", model_id);
 
         // 1. Configure OS-level sandbox isolation settings (MacOS sandbox-exec or Linux equivalent)
